@@ -57,14 +57,14 @@ if fecha_elegida in df_completo['acq_date'].values:
         matriz_binaria[lat_i, lon_i] = 1
 
     # Guardar la matriz recortada original con los puntos dispersos
-    np.save(f'matriz_fractal_recorte_{fecha_elegida}.npy', matriz_binaria)
+    np.save(f'output/matriz_fractal_recorte_{fecha_elegida}.npy', matriz_binaria)
 
     # --- FILTRO MORFOLÓGICO DE DILATACIÓN (10 ITERACIONES) ---
     print("Aplicando filtro morfológico para conectar los puntos del frente de fuego...")
     matriz_continua = binary_dilation(matriz_binaria, iterations=11).astype(int)
     
     # Guardamos la versión engrosada intermedia
-    np.save(f'matriz_fractal_recorte_continua_{fecha_elegida}.npy', matriz_continua)
+    np.save(f'output/matriz_fractal_recorte_continua_{fecha_elegida}.npy', matriz_continua)
 
     # --- ALGORITMO DE LIMPIEZA AUTOMÁTICA DE PUNTOS AISLADOS (RUIDO) ---
     print("Identificando componentes conectados para eliminar islas flotantes...")
@@ -83,7 +83,7 @@ if fecha_elegida in df_completo['acq_date'].values:
     
     # Guardamos el archivo numérico definitivo que leerá tu Algoritmo Genético
     nombre_matriz_limpia_npy = f'matriz_objetivo_limpia_{fecha_elegida}.npy'
-    np.save(nombre_matriz_limpia_npy, matriz_limpia)
+    np.save('output/' + nombre_matriz_limpia_npy, matriz_limpia)
     print(f" -> Guardado archivo .npy limpio: {nombre_matriz_limpia_npy}")
     print(f" -> Islas aisladas eliminadas con éxito: {num_features - 1}")
 
@@ -96,7 +96,7 @@ if fecha_elegida in df_completo['acq_date'].values:
     plt.title(f"Silueta Fractal Recortada (Matriz {fecha_elegida})")
     plt.xlabel("Índice X")
     plt.ylabel("Índice Y")
-    plt.savefig(f'silueta_fractal_recorte_{fecha_elegida}.png', dpi=300)
+    plt.savefig(f'output/silueta_fractal_recorte_{fecha_elegida}.png', dpi=300)
     plt.close()
 
     # 2. Conexión por dilatación morfológica
@@ -105,7 +105,7 @@ if fecha_elegida in df_completo['acq_date'].values:
     plt.title(f"Silueta Fractal Continua (Matriz {fecha_elegida})")
     plt.xlabel("Índice X")
     plt.ylabel("Índice Y")
-    plt.savefig(f'silueta_fractal_continua_{fecha_elegida}.png', dpi=300)
+    plt.savefig(f'output/silueta_fractal_continua_{fecha_elegida}.png', dpi=300)
     plt.close()
 
     # 3. El cuerpo principal limpio de focos secundarios aislados

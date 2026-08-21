@@ -33,7 +33,7 @@ try:
     df_dia = df[df['acq_date'] == dia_pico]
     
     # Guardar este subconjunto en un archivo nuevo para trabajar más rápido
-    df_dia.to_csv('incendios_dia_pico.csv', index=False)
+    df_dia.to_csv('output/incendios_dia_pico.csv', index=False)
     print(f"Subconjunto del día guardado con éxito como 'incendios_dia_pico.csv'")
 
     

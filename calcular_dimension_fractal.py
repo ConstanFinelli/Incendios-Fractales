@@ -59,10 +59,11 @@ if __name__ == "__main__":
     # 1. Solicitar la fecha para cargar el archivo correcto
     fecha_elegida = input("Escribí la fecha a procesar (ejemplo: 2024-08-30): ").strip()
     nombre_archivo = f'matriz_objetivo_limpia_{fecha_elegida}.npy'
+    #nombre_archivo = f'matriz_simulada_prueba.npy' #para probar con matriz de automata
     
     try:
         print(f"Cargando {nombre_archivo}...")
-        matriz_limpia = np.load(nombre_archivo)
+        matriz_limpia = np.load('output/' + nombre_archivo)
         
         # 2. Extraer el perímetro
         perimetro = extraer_perimetro(matriz_limpia)

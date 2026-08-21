@@ -48,13 +48,13 @@ if fecha_elegida in df_completo['acq_date'].values:
         matriz_binaria[lat_i, lon_i] = 1
 
     # Guardar la matriz para usarla como el objetivo del algoritmo genético
-    np.save(f'matriz_fractal_{fecha_elegida}.npy', matriz_binaria)
+    np.save(f'output/matriz_fractal_{fecha_elegida}.npy', matriz_binaria)
 
     # Graficar la matriz continua en blanco y negro
     plt.figure(figsize=(6,6))
     plt.imshow(matriz_binaria, cmap='binary', origin='lower')
     plt.title(f"Silueta Fractal Continua (Matriz {fecha_elegida})")
-    plt.savefig(f'silueta_fractal_{fecha_elegida}.png', dpi=300)
+    plt.savefig(f'output/silueta_fractal_{fecha_elegida}.png', dpi=300)
     plt.close()
     print(f"¡Matriz continua guardada como 'silueta_fractal_{fecha_elegida}.png'!")
 
@@ -70,7 +70,7 @@ if fecha_elegida in df_completo['acq_date'].values:
         marker_kwds=dict(radius=3, fill=True)
     )
     nombre_html = f'mapa_incendios_{fecha_elegida}.html'
-    mapa_interactivo.save(nombre_html)
+    mapa_interactivo.save('output/' + nombre_html)
     print(f" -> Guardado: {nombre_html}")
     
     # ----------------------------------------------------
@@ -96,7 +96,7 @@ if fecha_elegida in df_completo['acq_date'].values:
     plt.grid(True, linestyle='--', alpha=0.3)
     
     nombre_png = f'mapa_incendios_{fecha_elegida}.png'
-    plt.savefig(nombre_png, dpi=300, bbox_inches='tight')
+    plt.savefig('output/' + nombre_png, dpi=300, bbox_inches='tight')
     plt.close() # Cierra la figura para liberar memoria
     print(f" -> Guardada: {nombre_png}")
     

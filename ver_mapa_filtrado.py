@@ -43,6 +43,11 @@ if fecha_elegida in df_completo['acq_date'].values:
         (df_dia['longitude'] >= lon_min) & (df_dia['longitude'] <= lon_max)
     ]
     print(f"Focos detectados dentro del área de estudio: {len(df_filtrado)}")
+    
+    if len(df_filtrado) == 0:
+        print("No hay incendios registrados en esta zona para la fecha solicitada. Finalizando proceso.")
+        import sys
+        sys.exit(0)
 
     # 6. RASTERIZACIÓN DE LA ZONA RECORTADA
     tamano_matriz = 256

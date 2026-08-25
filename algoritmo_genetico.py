@@ -180,6 +180,8 @@ def ejecutar_algoritmo_genetico(ruta_matriz_real):
     print(f"Dirección Viento: {mejor_individuo[1]:.2f} grados")
     print(f"Humedad: {mejor_individuo[2]:.2f}%")
     print(f"Combustible: {mejor_individuo[3]:.2f}")
+    
+    return mejor_individuo
 
 if __name__ == "__main__":
     # Necesitas pasar la ruta de la matriz que generó ver_mapa_filtrado.py

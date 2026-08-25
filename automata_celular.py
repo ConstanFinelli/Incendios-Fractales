@@ -2,23 +2,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-def simular_incendio_AC(viento_vel, viento_dir, humedad, combustible, pasos_tiempo, tamano=256, centro_y=None, centro_x=None):
+def simular_incendio_AC(viento_vel, viento_dir, humedad, combustible, pasos_tiempo, tamano=256, centro_y=None, centro_x=None, grilla_inicial=None):
     """
     Simulador de Autómata Celular Estocástico para Incendios Forestales.
     Estados de celda: 0 = Intacta, 1 = Ardiendo, 2 = Quemada (Cenizas)
     """
-    # 1. Inicializar la grilla 256x256 (Estado 0: Intacta)
-    grilla = np.zeros((tamano, tamano), dtype=int)
-    
-    # Iniciar el fuego en la coordenada dada, o en el centro por defecto
-    cy = centro_y if centro_y is not None else tamano // 2
-    cx = centro_x if centro_x is not None else tamano // 2
-    
-    # Evitar desbordamientos si el centro está en los bordes
-    cy = max(1, min(tamano - 2, cy))
-    cx = max(1, min(tamano - 2, cx))
-    
-    grilla[cy-1:cy+2, cx-1:cx+2] = 1 
+    # 1. Inicializar la grilla
+    if grilla_inicial is not None:
+        grilla = np.copy(grilla_inicial).astype(int)
+        # Asegurarse de que los valores > 0 sean tratados como celdas ardiendo (1) o quemadas
+        # Para simplificar la re-simulación, los píxeles quemados (1) de la matriz satelital 
+        # arrancan como frente vivo (1)
+        grilla[grilla > 0] = 1
+    else:
+        grilla = np.zeros((tamano, tamano), dtype=int)
+        
+        # Iniciar el fuego en la coordenada dada, o en el centro por defecto
+        cy = centro_y if centro_y is not None else tamano // 2
+        cx = centro_x if centro_x is not None else tamano // 2
+        
+        # Evitar desbordamientos si el centro está en los bordes
+        cy = max(1, min(tamano - 2, cy))
+        cx = max(1, min(tamano - 2, cx))
+        
+        grilla[cy-1:cy+2, cx-1:cx+2] = 1 
     
     # 2. Configurar parámetros base
     humedad_norm = humedad / 100.0  # Normalizar de 0 a 1

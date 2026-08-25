@@ -1,24 +1,50 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from automata_celular import simular_incendio_AC
 from matplotlib.colors import ListedColormap
+import os
 
-def ejecutar_prediccion(matriz_real, mejores_variables, pasos_futuros=200):
+def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_futuros=100):
     """
-    Toma la matriz del satélite actual y las variables microclimáticas óptimas,
-    y simula el avance del fuego hacia el futuro.
+    Toma los datos satelitales (matriz única o lista de fechas/matrices) y las
+    variables microclimáticas óptimas, y simula el avance del fuego hacia el futuro
+    a partir de la última observación registrada.
     """
     viento_vel, viento_dir, humedad, combustible = mejores_variables
-    tamano = matriz_real.shape[0]
     
-    print("\n" + "="*50)
-    print("INICIANDO FASE PREDICTIVA (PREVENCIÓN)")
-    print("="*50)
-    print(f"Estado Inicial: Mapa Satelital")
+    # Determinar si es serie temporal o matriz directa
+    if isinstance(datos_entrada, list):
+        fecha_inicial, ruta_inicial = datos_entrada[0]
+        fecha_final, ruta_final = datos_entrada[-1]
+        matriz_inicial = np.load(ruta_inicial)
+        matriz_final = np.load(ruta_final)
+        modo_multitemporal = len(datos_entrada) > 1
+    elif isinstance(datos_entrada, np.ndarray):
+        matriz_inicial = datos_entrada
+        matriz_final = datos_entrada
+        fecha_inicial = "Observación Inicial"
+        fecha_final = "Observación Final"
+        modo_multitemporal = False
+    elif isinstance(datos_entrada, str):
+        matriz_inicial = np.load(datos_entrada)
+        matriz_final = matriz_inicial
+        fecha_inicial = "Observación"
+        fecha_final = "Observación"
+        modo_multitemporal = False
+    else:
+        raise ValueError("Formato de datos de entrada no reconocido.")
+        
+    tamano = matriz_final.shape[0]
+    
+    print("\n" + "="*60)
+    print("INICIANDO FASE PREDICTIVA (PREVENCIÓN Y GESTIÓN DE RIESGO)")
+    print("="*60)
+    print(f"Punto de partida de la proyección: {fecha_final}")
     print(f"Proyectando {pasos_futuros} pasos en el futuro...")
-    print(f"Condiciones: Viento {viento_vel:.1f}km/h | Dirección {viento_dir:.1f}° | Humedad {humedad:.1f}%")
+    print(f"Condiciones Microclimáticas: Viento {viento_vel:.1f}km/h @ {viento_dir:.1f}° | Humedad {humedad:.1f}% | Comb {combustible:.2f}")
     
-    # Simular
+    # Simular proyección a partir del último estado observado
     grilla_final, matriz_binaria_futura = simular_incendio_AC(
         viento_vel=viento_vel,
         viento_dir=viento_dir,
@@ -26,44 +52,59 @@ def ejecutar_prediccion(matriz_real, mejores_variables, pasos_futuros=200):
         combustible=combustible,
         pasos_tiempo=pasos_futuros,
         tamano=tamano,
-        grilla_inicial=matriz_real
+        grilla_inicial=matriz_final
     )
     
-    print("Generando Mapa de Riesgo Predictivo...")
-    
-    # Crear un mapa combinado
-    # 0 = Intacto
-    # 1 = Fuego Original (Satélite)
-    # 2 = Nuevo fuego proyectado (Riesgo)
-    mapa_riesgo = np.zeros_like(matriz_real)
-    
-    # Marcar el fuego nuevo primero
+    # Crear matriz de riesgo:
+    # 0 = Intacto, 1 = Fuego Satelital Observado (Base), 2 = Riesgo de Expansión Futura
+    mapa_riesgo = np.zeros_like(matriz_final)
     mapa_riesgo[matriz_binaria_futura > 0] = 2
+    mapa_riesgo[matriz_final > 0] = 1
     
-    # Sobreescribir con el fuego original para que resalte el "centro"
-    mapa_riesgo[matriz_real > 0] = 1
+    cmap_riesgo = ListedColormap(['#f8f9fa', '#343a40', '#dc3545'])
     
-    # Visualizar
-    plt.figure(figsize=(10, 8))
-    
-    # Colores: Blanco (Intacto), Gris/Negro oscuro (Fuego Pasado), Rojo Brillante (Proyección Futura)
-    cmap_riesgo = ListedColormap(['#f5f5f5', '#4a4a4a', '#ff0000'])
-    
-    plt.imshow(mapa_riesgo, cmap=cmap_riesgo, interpolation='nearest')
-    plt.title(f"Mapa de Riesgo: Predicción a {pasos_futuros} ciclos\n(Gris: Fuego Actual | Rojo: Expansión Proyectada)")
-    
-    # Leyenda customizada
-    import matplotlib.patches as mpatches
-    p_intacto = mpatches.Patch(color='#f5f5f5', label='Zona Intacta')
-    p_actual = mpatches.Patch(color='#4a4a4a', label='Fuego Satelital Actual')
-    p_futuro = mpatches.Patch(color='#ff0000', label='Riesgo de Avance (Predicción)')
-    plt.legend(handles=[p_intacto, p_actual, p_futuro], loc='lower right')
-    
-    plt.grid(False)
-    
+    if modo_multitemporal:
+        # Visualización Comparativa Multipanel (Evolución + Predicción)
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+        
+        # Panel 1: Estado Inicial Observado
+        axes[0].imshow(matriz_inicial, cmap='hot_r', origin='lower', interpolation='nearest')
+        axes[0].set_title(f"1. Foco Inicial ({fecha_inicial})", fontsize=12, fontweight='bold')
+        axes[0].axis('off')
+        
+        # Panel 2: Estado Final Observado
+        axes[1].imshow(matriz_final, cmap='hot_r', origin='lower', interpolation='nearest')
+        axes[1].set_title(f"2. Foco Expandido ({fecha_final})", fontsize=12, fontweight='bold')
+        axes[1].axis('off')
+        
+        # Panel 3: Proyección Futura
+        axes[2].imshow(mapa_riesgo, cmap=cmap_riesgo, origin='lower', interpolation='nearest')
+        axes[2].set_title(f"3. Mapa de Riesgo Predictivo (+{pasos_futuros} ciclos)", fontsize=12, fontweight='bold')
+        axes[2].axis('off')
+        
+        p_intacto = mpatches.Patch(color='#f8f9fa', label='Zona Intacta', ec='#ccc')
+        p_actual = mpatches.Patch(color='#343a40', label=f'Fuego Observado ({fecha_final})')
+        p_futuro = mpatches.Patch(color='#dc3545', label='Riesgo de Avance Proyectado')
+        axes[2].legend(handles=[p_intacto, p_actual, p_futuro], loc='lower right')
+        
+        plt.suptitle(f"Simulación Predictiva Multitemporal | Viento: {viento_vel:.1f} km/h @ {viento_dir:.1f}° | Humedad: {humedad:.1f}%", fontsize=14)
+        plt.tight_layout()
+    else:
+        # Visualización de Panel Único
+        plt.figure(figsize=(10, 8))
+        plt.imshow(mapa_riesgo, cmap=cmap_riesgo, origin='lower', interpolation='nearest')
+        plt.title(f"Mapa de Riesgo: Predicción (+{pasos_futuros} ciclos)\n(Gris: Fuego Observado | Rojo: Expansión Proyectada)", fontsize=13)
+        p_intacto = mpatches.Patch(color='#f8f9fa', label='Zona Intacta', ec='#ccc')
+        p_actual = mpatches.Patch(color='#343a40', label='Fuego Satelital Actual')
+        p_futuro = mpatches.Patch(color='#dc3545', label='Riesgo de Avance (Predicción)')
+        plt.legend(handles=[p_intacto, p_actual, p_futuro], loc='lower right')
+        plt.axis('off')
+        plt.tight_layout()
+        
     nombre_archivo = 'output/mapa_riesgo_predictivo.png'
     plt.savefig(nombre_archivo, dpi=300, bbox_inches='tight')
     plt.close()
     
     print(f"Mapa de Riesgo exportado exitosamente a: {nombre_archivo}")
     return mapa_riesgo
+

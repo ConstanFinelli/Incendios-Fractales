@@ -1,6 +1,8 @@
 import numpy as np
 import random
 import os
+import multiprocessing
+from functools import partial
 from automata_celular import simular_incendio_AC, _avanzar_pasos_AC
 from calcular_dimension_fractal import extraer_perimetro, calcular_box_counting
 
@@ -27,12 +29,22 @@ def cargar_datos_serie_temporal(entradas):
         entradas = [("Día_Único", entradas)]
         
     datos_serie = []
+    matriz_acumulada = None
+    
     for fecha, ruta in entradas:
         if not os.path.exists(ruta):
             print(f"Advertencia: No se encontró el archivo {ruta}. Se omitirá.")
             continue
             
-        matriz_real = np.load(ruta)
+        matriz_dia = np.load(ruta)
+        
+        if matriz_acumulada is None:
+            matriz_acumulada = matriz_dia.copy()
+        else:
+            # Hacer que la matriz real sea acumulativa (cicatriz de fuego total)
+            matriz_acumulada = np.logical_or(matriz_acumulada > 0, matriz_dia > 0).astype(int)
+            
+        matriz_real = matriz_acumulada.copy()
         perimetro_real = extraer_perimetro(matriz_real)
         
         try:
@@ -47,7 +59,7 @@ def cargar_datos_serie_temporal(entradas):
             'dimension_fractal': D_real
         })
         
-        print(f" -> [{fecha}] Dimensión Fractal Satelital (D): {D_real:.4f} | Celdas afectadas: {np.sum(matriz_real > 0)}")
+        print(f" -> [{fecha}] Dimensión Fractal Satelital (D): {D_real:.4f} | Celdas acumuladas: {np.sum(matriz_real > 0)}")
         
     return datos_serie
 
@@ -103,7 +115,7 @@ def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_PO
             interseccion = np.logical_and(matriz_real > 0, matriz_binaria > 0).sum()
             union = np.logical_or(matriz_real > 0, matriz_binaria > 0).sum()
             iou = (interseccion / union) if union > 0 else 0.0
-            suma_fitness += (0.4 * fitness_fractal) + (0.6 * iou)
+            suma_fitness += (0.5 * fitness_fractal) + (0.5 * iou)
             
         return suma_fitness / num_simulaciones
         
@@ -211,33 +223,38 @@ def ejecutar_algoritmo_genetico(entradas_matrices):
     mejor_fitness_global = -1.0
     
     # 3. Bucle evolutivo
-    for generacion in range(GENERACIONES):
-        fitness_poblacion = []
-        for ind in poblacion:
-            fit = evaluar_fitness_multitemporal(ind, datos_serie, pasos_por_dia=PASOS_POR_DIA)
-            fitness_poblacion.append((ind, fit))
+    num_cpus = max(1, multiprocessing.cpu_count() - 1)  # Dejar un núcleo libre para el SO
+    eval_func = partial(evaluar_fitness_multitemporal, datos_serie=datos_serie, pasos_por_dia=PASOS_POR_DIA)
+    
+    with multiprocessing.Pool(processes=num_cpus) as pool:
+        for generacion in range(GENERACIONES):
+            # Evaluar el fitness de toda la población en paralelo
+            fitness_valores = pool.map(eval_func, poblacion)
             
-        fitness_poblacion.sort(key=lambda x: x[1], reverse=True)
-        mejor_ind_gen, mejor_fit_gen = fitness_poblacion[0]
-        
-        if mejor_fit_gen > mejor_fitness_global:
-            mejor_fitness_global = mejor_fit_gen
-            mejor_individuo_global = list(mejor_ind_gen)
+            # Reconstruir la lista de tuplas (individuo, fitness)
+            fitness_poblacion = list(zip(poblacion, fitness_valores))
             
-        print(f"Gen {generacion+1:02d}/{GENERACIONES:02d} | Mejor Fitness: {mejor_fit_gen:.4f} | Viento: {mejor_ind_gen[0]:.1f}km/h @ {mejor_ind_gen[1]:.1f}° | Humedad: {mejor_ind_gen[2]:.1f}% | Comb: {mejor_ind_gen[3]:.2f}")
-        
-        # Elitismo: Conservar los 2 mejores
-        NUM_ELITES = 2
-        nueva_poblacion = [ind_fit[0] for ind_fit in fitness_poblacion[:NUM_ELITES]]
-        
-        # Reproducción (Torneo + Cruce + Mutación)
-        while len(nueva_poblacion) < TAMANO_POBLACION:
-            p1 = seleccion_torneo(fitness_poblacion, k=3)
-            p2 = seleccion_torneo(fitness_poblacion, k=3)
-            h1, _ = cruzar(p1, p2)
-            nueva_poblacion.append(mutar(h1))
+            fitness_poblacion.sort(key=lambda x: x[1], reverse=True)
+            mejor_ind_gen, mejor_fit_gen = fitness_poblacion[0]
             
-        poblacion = nueva_poblacion
+            if mejor_fit_gen > mejor_fitness_global:
+                mejor_fitness_global = mejor_fit_gen
+                mejor_individuo_global = list(mejor_ind_gen)
+                
+            print(f"Gen {generacion+1:02d}/{GENERACIONES:02d} | Mejor Fitness: {mejor_fit_gen:.4f} | Viento: {mejor_ind_gen[0]:.1f}km/h @ {mejor_ind_gen[1]:.1f}° | Humedad: {mejor_ind_gen[2]:.1f}% | Comb: {mejor_ind_gen[3]:.2f}")
+            
+            # Elitismo: Conservar los 2 mejores
+            NUM_ELITES = 2
+            nueva_poblacion = [ind_fit[0] for ind_fit in fitness_poblacion[:NUM_ELITES]]
+            
+            # Reproducción (Torneo + Cruce + Mutación)
+            while len(nueva_poblacion) < TAMANO_POBLACION:
+                p1 = seleccion_torneo(fitness_poblacion, k=3)
+                p2 = seleccion_torneo(fitness_poblacion, k=3)
+                h1, _ = cruzar(p1, p2)
+                nueva_poblacion.append(mutar(h1))
+                
+            poblacion = nueva_poblacion
         
     print("\n" + "="*60)
     print("OPTIMIZACIÓN INVERSA FINALIZADA")

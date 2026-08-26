@@ -135,8 +135,8 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 - **Motivo de creación:** Procesar individualmente un día satelital específico, convirtiendo los puntos de latitud/longitud en una matriz binaria limpia libre de focos aislados.
 - **Archivos donde se utiliza:**
-  - Llamada internamente por `procesar_rango_fechas` y `procesar_fecha` en [`ver_mapa_filtrado.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/ver_mapa_filtrado.py).
-  - Usada indirectamente por [`main.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/main.py).
+  - Llamada internamente por `procesar_rango_fechas` y `procesar_fecha` en [`ver_mapa_filtrado.py`](../ver_mapa_filtrado.py).
+  - Usada indirectamente por [`main.py`](../main.py).
 - **Parámetros:**
   - `fecha` (_str_): Fecha a procesar en formato `'AAAA-MM-DD'` (ej. `'2022-02-18'`).
   - `df_fuente` (_GeoDataFrame, opcional_): DataFrame de incendios sobre el cual buscar. Si es `None`, utiliza la base global `df_completo`.
@@ -150,8 +150,8 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 - **Motivo de creación:** Permitir el análisis multitemporal entre dos fechas dadas ($T_{\text{inicio}}$ a $T_{\text{fin}}$), filtrando automáticamente los días sin focos (ej. por nubosidad satelital) y retornando la serie temporal ordenada cronológicamente.
 - **Archivos donde se utiliza:**
-  - Importada y utilizada en [`main.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/main.py).
-  - Ejecutable vía CLI en [`ver_mapa_filtrado.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/ver_mapa_filtrado.py).
+  - Importada y utilizada en [`main.py`](../main.py).
+  - Ejecutable vía CLI en [`ver_mapa_filtrado.py`](../ver_mapa_filtrado.py).
 - **Parámetros:**
   - `fecha_inicio` (_str_): Fecha inicial de la serie `'AAAA-MM-DD'`.
   - `fecha_fin` (_str_): Fecha final de la serie `'AAAA-MM-DD'`.
@@ -164,8 +164,8 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 - **Motivo de creación:** Ofrecer una función retrocompatible para procesar un solo día solicitando la fecha por consola si no se especifica.
 - **Archivos donde se utiliza:**
-  - Importada y utilizada en [`main.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/main.py).
-  - Ejecutable directamente como script principal en [`ver_mapa_filtrado.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/ver_mapa_filtrado.py).
+  - Importada y utilizada en [`main.py`](../main.py).
+  - Ejecutable directamente como script principal en [`ver_mapa_filtrado.py`](../ver_mapa_filtrado.py).
 - **Parámetros:**
   - `fecha_elegida` (_str, opcional_): Fecha en formato `'AAAA-MM-DD'`. Si es `None`, muestra el listado de fechas disponibles y pide ingreso al usuario.
 - **Retorno:**
@@ -183,8 +183,8 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 - **Motivo de creación:** El comportamiento fractal y caótico del fuego se manifiesta en la **rugosidad de su frontera/borde exterior**, no en su área sólida interior. Esta función extrae el contorno de 1 píxel de espesor mediante erosión morfológica binaria.
 - **Archivos donde se utiliza:**
-  - Utilizada en [`calcular_dimension_fractal.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/calcular_dimension_fractal.py).
-  - Importada y utilizada extensivamente en [`algoritmo_genetico.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/algoritmo_genetico.py) (en `cargar_datos_serie_temporal` y `evaluar_fitness_multitemporal`).
+  - Utilizada en [`calcular_dimension_fractal.py`](../calcular_dimension_fractal.py).
+  - Importada y utilizada extensivamente en [`algoritmo_genetico.py`](../algoritmo_genetico.py) (en `cargar_datos_serie_temporal` y `evaluar_fitness_multitemporal`).
 - **Parámetros:**
   - `matriz_binaria` (_np.ndarray 2D_): Matriz binaria donde $1$ representa el área quemada/activa y $0$ el terreno intacto.
 - **Retorno:**
@@ -196,8 +196,8 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 - **Motivo de creación:** Implementar el algoritmo formal de **Conteo de Cajas (Box-Counting)** para calcular numéricamente la Dimensión Fractal ($D$). Divide la grilla en cajas de tamaño $s \in \{256, 128, 64, 32, 16, 8, 4, 2, 1\}$, cuenta cuántas cajas contienen al menos un píxel de fuego $N(s)$, y ajusta una regresión lineal log-log: $\log(N) = D \cdot \log(1/s) + c$.
 - **Archivos donde se utiliza:**
-  - Utilizada en [`calcular_dimension_fractal.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/calcular_dimension_fractal.py).
-  - Importada y utilizada en [`algoritmo_genetico.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/algoritmo_genetico.py).
+  - Utilizada en [`calcular_dimension_fractal.py`](../calcular_dimension_fractal.py).
+  - Importada y utilizada en [`algoritmo_genetico.py`](../algoritmo_genetico.py).
 - **Parámetros:**
   - `matriz_perimetro` (_np.ndarray 2D_): Matriz binaria que contiene el perímetro del fuego.
 - **Retorno:**
@@ -220,8 +220,8 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 - **Motivo de creación:** Motor interno de alto rendimiento del autómata celular. En lugar de iterar por toda la grilla de $256 \times 256$ ($65,536$ celdas), localiza únicamente las celdas que están ardiendo activamente (`np.where(grilla == 1)`), logrando una aceleración computacional de más del $400\%$.
 - **Archivos donde se utiliza:**
-  - Utilizada internamente por `simular_incendio_AC` y `simular_evolucion_multietapa` en [`automata_celular.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/automata_celular.py).
-  - Importada y utilizada directamente en [`algoritmo_genetico.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/algoritmo_genetico.py) para simular transiciones diarias continuas.
+  - Utilizada internamente por `simular_incendio_AC` y `simular_evolucion_multietapa` en [`automata_celular.py`](../automata_celular.py).
+  - Importada y utilizada directamente en [`algoritmo_genetico.py`](../algoritmo_genetico.py) para simular transiciones diarias continuas.
 - **Parámetros:**
   - `grilla` (_np.ndarray 2D_): Matriz con estados actuales (0, 1 o 2).
   - `viento_vel` (_float_): Velocidad del viento en km/h ($0-50$).
@@ -239,9 +239,9 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 - **Motivo de creación:** Interfaz estándar para simular un incendio completo, ya sea a partir de un punto inicial central o inyectando una matriz previa (observación satelital).
 - **Archivos donde se utiliza:**
-  - Utilizada en [`automata_celular.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/automata_celular.py).
-  - Utilizada en [`algoritmo_genetico.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/algoritmo_genetico.py) (para modo de día único).
-  - Utilizada en [`simulador_predictivo.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/simulador_predictivo.py) para proyectar el riesgo futuro.
+  - Utilizada en [`automata_celular.py`](../automata_celular.py).
+  - Utilizada en [`algoritmo_genetico.py`](../algoritmo_genetico.py) (para modo de día único).
+  - Utilizada en [`simulador_predictivo.py`](../simulador_predictivo.py) para proyectar el riesgo futuro.
 - **Parámetros:**
   - `viento_vel`, `viento_dir`, `humedad`, `combustible`, `pasos_tiempo`, `tamano`: Idem anterior.
   - `centro_y`, `centro_x` (_int, opcional_): Coordenadas de inicio del foco de ignición.
@@ -257,7 +257,7 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 - **Motivo de creación:** Permitir simular la evolución temporal continua durante varias etapas (días) consecutivas sin reiniciar el fuego, guardando la fotografía acumulada de cada etapa.
 - **Archivos donde se utiliza:**
-  - Definida en [`automata_celular.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/automata_celular.py).
+  - Definida en [`automata_celular.py`](../automata_celular.py).
 - **Parámetros:**
   - `viento_vel`, `viento_dir`, `humedad`, `combustible`: Variables microclimáticas.
   - `grilla_inicial` (_np.ndarray 2D_): Estado del fuego al inicio de la serie temporal.
@@ -279,9 +279,9 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 #### 9. `cargar_datos_serie_temporal(entradas)`
 
-- **Motivo de creación:** Leer las matrices satelitales `.npy`, calcular previamente la Dimensión Fractal real ($D_{\text{real}}$) de cada fecha satelital y empaquetar los datos para acelerar las evaluaciones del AG.
+- **Motivo de creación:** Leer las matrices satelitales `.npy`, combinarlas de forma **acumulativa** (cicatriz de fuego total histórica) para asegurar el correcto cálculo del fitness, calcular previamente la Dimensión Fractal real ($D_{\text{real}}$) de cada fecha satelital y empaquetar los datos.
 - **Archivos donde se utiliza:**
-  - Utilizada internamente por `ejecutar_algoritmo_genetico` en [`algoritmo_genetico.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/algoritmo_genetico.py).
+  - Utilizada internamente por `ejecutar_algoritmo_genetico` en [`algoritmo_genetico.py`](../algoritmo_genetico.py).
 - **Parámetros:**
   - `entradas` (_str_ | _list[tuple[str, str]]_): Ruta de archivo único o lista de tuplas `[(fecha, ruta), ...]`.
 - **Retorno:**
@@ -297,7 +297,7 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
   - Humedad: $10\%$ a $80\%$.
   - Combustible: $0.1$ a $1.0$.
 - **Archivos donde se utiliza:**
-  - Utilizada en [`algoritmo_genetico.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/algoritmo_genetico.py) para inicializar la población.
+  - Utilizada en [`algoritmo_genetico.py`](../algoritmo_genetico.py) para inicializar la población.
 - **Parámetros:** Ninguno.
 - **Retorno:**
   - (_list[float]_): Vector de 4 genes `[viento_vel, viento_dir, humedad, combustible]`.
@@ -308,7 +308,7 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 - **Motivo de creación:** Evaluar qué tan buena es una hipótesis climática simulando la evolución del fuego paso a paso a lo largo de todos los días de la serie temporal. Calcula el fitness híbrido en cada día ($0.4 \cdot \text{Fractal} + 0.6 \cdot \text{IoU}$) y promedia los resultados entre todas las transiciones y corridas Monte Carlo.
 - **Archivos donde se utiliza:**
-  - Utilizada en [`algoritmo_genetico.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/algoritmo_genetico.py).
+  - Utilizada en [`algoritmo_genetico.py`](../algoritmo_genetico.py).
 - **Parámetros:**
   - `individuo` (_list[float]_): Cromosoma a evaluar.
   - `datos_serie` (_list[dict]_): Observaciones reales devueltas por `cargar_datos_serie_temporal`.
@@ -323,7 +323,7 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 - **Motivo de creación:** Operador genético de cruzamiento en un punto para combinar las características climáticas de dos progenitores seleccionados.
 - **Archivos donde se utiliza:**
-  - Utilizada en [`algoritmo_genetico.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/algoritmo_genetico.py).
+  - Utilizada en [`algoritmo_genetico.py`](../algoritmo_genetico.py).
 - **Parámetros:**
   - `padre1` (_list[float]_): Primer cromosoma progenitor.
   - `padre2` (_list[float]_): Segundo cromosoma progenitor.
@@ -336,7 +336,7 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 - **Motivo de creación:** Introducir variabilidad genética con probabilidad `PROB_MUTACION = 0.2`, alterando aleatoriamente uno de los cuatro parámetros climáticos.
 - **Archivos donde se utiliza:**
-  - Utilizada en [`algoritmo_genetico.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/algoritmo_genetico.py).
+  - Utilizada en [`algoritmo_genetico.py`](../algoritmo_genetico.py).
 - **Parámetros:**
   - `individuo` (_list[float]_): Cromosoma a mutar.
 - **Retorno:**
@@ -348,7 +348,7 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 - **Motivo de creación:** Seleccionar progenitores mediante torneo ($k=3$). Es independiente de la escala absoluta del fitness y resistente al ruido estocástico del autómata celular.
 - **Archivos donde se utiliza:**
-  - Utilizada en [`algoritmo_genetico.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/algoritmo_genetico.py).
+  - Utilizada en [`algoritmo_genetico.py`](../algoritmo_genetico.py).
 - **Parámetros:**
   - `fitness_poblacion` (_list[tuple[list[float], float]]_): Lista de pares `(individuo, fitness)`.
   - `k` (_int, opcional_): Cantidad de competidores en el torneo. Default: 3.
@@ -359,10 +359,10 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 #### 15. `ejecutar_algoritmo_genetico(entradas_matrices)`
 
-- **Motivo de creación:** Orquestador principal del Algoritmo Genético. Inicializa la población, ejecuta las generaciones con elitismo (preserva los 2 mejores), selección por torneo, cruce y mutación, e imprime el progreso y las variables inferidas.
+- **Motivo de creación:** Orquestador principal del Algoritmo Genético. Inicializa la población y evalúa el fitness en **paralelo mediante multiprocessing**. Ejecuta las generaciones con elitismo (preserva los 2 mejores), selección por torneo, cruce y mutación, e imprime el progreso y las variables inferidas.
 - **Archivos donde se utiliza:**
-  - Importada y utilizada en [`main.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/main.py).
-  - Ejecutable directamente desde [`algoritmo_genetico.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/algoritmo_genetico.py).
+  - Importada y utilizada en [`main.py`](../main.py).
+  - Ejecutable directamente desde [`algoritmo_genetico.py`](../algoritmo_genetico.py).
 - **Parámetros:**
   - `entradas_matrices` (_str_ | _list[tuple[str, str]]_): Ruta única o lista de tuplas `[(fecha, ruta), ...]`.
 - **Retorno:**
@@ -378,10 +378,10 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 #### 16. `ejecutar_prediccion(datos_entrada, mejores_variables, pasos_futuros=100)`
 
-- **Motivo de creación:** Generar el producto final de prevención: toma la última silueta satelital observada, inyecta las variables microclimáticas óptimas, simula hacia el futuro y exporta una imagen multipanel en alta resolución (`output/mapa_riesgo_predictivo.png`).
+- **Motivo de creación:** Generar el producto final de prevención: reconstruye la cicatriz acumulada a partir de las fechas satelitales, inyecta las variables microclimáticas óptimas, simula hacia el futuro y exporta una imagen multipanel en alta resolución (`output/mapa_riesgo_predictivo.png`).
 - **Archivos donde se utiliza:**
-  - Importada y utilizada en [`main.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/main.py).
-  - Ejecutable directamente en [`simulador_predictivo.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/simulador_predictivo.py).
+  - Importada y utilizada en [`main.py`](../main.py).
+  - Ejecutable directamente en [`simulador_predictivo.py`](../simulador_predictivo.py).
 - **Parámetros:**
   - `datos_entrada` (_list[tuple]_ | _str_ | _np.ndarray_): Serie de fechas satelitales o matriz final.
   - `mejores_variables` (_list[float]_): Vector `[viento_vel, viento_dir, humedad, combustible]`.
@@ -401,7 +401,7 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 - **Motivo de creación:** Punto de entrada de la aplicación interactiva para el usuario. Solicita las fechas, dispara la extracción satelital (Fase 1), la optimización inversa por AG (Fase 2) y la predicción preventiva de riesgo (Fase 3).
 - **Archivos donde se utiliza:**
-  - Punto de entrada principal en [`main.py`](file:///c:/Facu/Algoritmos%20geneticos/Incendios-Fractales/main.py).
+  - Punto de entrada principal en [`main.py`](../main.py).
 - **Parámetros:** Ninguno.
 - **Retorno:** `None`.
 

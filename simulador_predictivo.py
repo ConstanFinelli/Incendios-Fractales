@@ -18,7 +18,13 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_futuros=100):
         fecha_inicial, ruta_inicial = datos_entrada[0]
         fecha_final, ruta_final = datos_entrada[-1]
         matriz_inicial = np.load(ruta_inicial)
-        matriz_final = np.load(ruta_final)
+        
+        # Generar matriz final acumulativa (cicatriz histórica)
+        matriz_final = np.zeros_like(matriz_inicial)
+        for _, ruta in datos_entrada:
+            matriz_dia = np.load(ruta)
+            matriz_final = np.logical_or(matriz_final > 0, matriz_dia > 0).astype(int)
+            
         modo_multitemporal = len(datos_entrada) > 1
     elif isinstance(datos_entrada, np.ndarray):
         matriz_inicial = datos_entrada

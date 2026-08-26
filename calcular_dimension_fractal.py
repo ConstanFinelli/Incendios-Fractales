@@ -7,86 +7,66 @@ def extraer_perimetro(matriz_binaria):
     Extrae el borde del incendio. La dimensión fractal del fuego se mide 
     sobre su perímetro rugoso, no sobre el área sólida.
     """
-    # Erosión: "Achica" el fuego un píxel hacia adentro
     matriz_erosionada = binary_erosion(matriz_binaria)
-    
-    # El perímetro es la diferencia entre la forma original y la erosionada
     perimetro = matriz_binaria.astype(int) - matriz_erosionada.astype(int)
     return perimetro
 
 def calcular_box_counting(matriz_perimetro):
     """
-    Aplica el algoritmo de Box-Counting sobre una matriz binaria (perímetro).
+    Aplica el algoritmo de Box-Counting de alta velocidad (Vectorizado 100% NumPy).
     Retorna la dimensión fractal (D), los tamaños de caja y los conteos.
     """
-    # Aseguramos que la matriz sea de tamaño 256x256
     n = min(matriz_perimetro.shape)
     
     tamanos_caja = []
     conteos_cajas = []
     
-    # Tamaños de caja desde n (256) reduciéndose a la mitad hasta 1
     tamano = n
     while tamano >= 1:
-        contador = 0
-        # Recorremos la matriz en "saltos" del tamaño de la caja actual
-        for i in range(0, n, tamano):
-            for j in range(0, n, tamano):
-                # Si hay al menos un '1' (borde de fuego) en esta caja, la contamos
-                if np.any(matriz_perimetro[i:i+tamano, j:j+tamano]):
-                    contador += 1
-                    
+        if tamano == n:
+            contador = 1 if np.any(matriz_perimetro) else 0
+        elif tamano == 1:
+            contador = np.count_nonzero(matriz_perimetro)
+        else:
+            # Reshape matricial en bloques 2D sin bucles Python (Ultra rápido en C)
+            bloques = matriz_perimetro.reshape(n // tamano, tamano, n // tamano, tamano).any(axis=(1, 3))
+            contador = np.count_nonzero(bloques)
+            
         tamanos_caja.append(tamano)
         conteos_cajas.append(contador)
-        
-        tamano = tamano // 2 # Reducir caja a la mitad
+        tamano = tamano // 2
         
     # Calcular la regresión lineal en escala Log-Log
-    # Ecuación: log(N) = D * log(1/s) 
     x = np.log(1.0 / np.array(tamanos_caja))
-    y = np.log(conteos_cajas)
+    y = np.log(np.maximum(conteos_cajas, 1))
     
-    # polyfit devuelve [pendiente, intersección_y]
     coeficientes = np.polyfit(x, y, 1)
     dimension_fractal = coeficientes[0]
     
     return dimension_fractal, x, y, tamanos_caja, conteos_cajas
 
-# ==========================================
-# EJECUCIÓN PRINCIPAL
-# ==========================================
 if __name__ == "__main__":
-    # 1. Solicitar la fecha para cargar el archivo correcto
-    fecha_elegida = input("Escribí la fecha a procesar (ejemplo: 2024-08-30): ").strip()
+    fecha_elegida = input("Escribí la fecha a procesar (ejemplo: 2022-02-18): ").strip()
     nombre_archivo = f'matriz_objetivo_limpia_{fecha_elegida}.npy'
-    #nombre_archivo = f'matriz_simulada_prueba.npy' #para probar con matriz de automata
     
     try:
         print(f"Cargando {nombre_archivo}...")
         matriz_limpia = np.load('output/' + nombre_archivo)
         
-        # 2. Extraer el perímetro
         perimetro = extraer_perimetro(matriz_limpia)
-        
-        # 3. Aplicar Box-Counting
         D, log_x, log_y, sizes, counts = calcular_box_counting(perimetro)
         print(f"\n--- RESULTADOS ---")
         print(f"Dimensión Fractal (D) calculada: {D:.4f}")
         
-        # 4. Graficar los resultados (Perímetro y Recta Log-Log)
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-        
-        # Gráfico del Perímetro
         ax1.imshow(perimetro, cmap='binary', origin='lower')
         ax1.set_title("Perímetro del Incendio")
         
-        # Gráfico de la Regresión Log-Log
         ax2.plot(log_x, log_y, 'ro-', label='Puntos (Cajas vs Tamaño)')
-        # Línea de tendencia
         tendencia_y = D * log_x + (log_y[0] - D * log_x[0]) 
         ax2.plot(log_x, tendencia_y, 'b--', label=f'Ajuste Lineal (Pendiente D={D:.4f})')
         
-        ax2.set_title("Gráfico Log-Log (Box-Counting)")
+        ax2.set_title("Gráfico Log-Log (Box-Counting Vectorizado)")
         ax2.set_xlabel("[Tamaño Inverso de Caja]")
         ax2.set_ylabel("[Cantidad de Cajas]")
         ax2.legend()
@@ -98,4 +78,4 @@ if __name__ == "__main__":
         plt.show()
 
     except FileNotFoundError:
-        print(f"Error: No se encontró el archivo {nombre_archivo}. Asegurate de correr el script anterior primero.")
+        print(f"No se encontró el archivo 'output/{nombre_archivo}'. Procesá primero la fecha con ver_mapa_filtrado.py")

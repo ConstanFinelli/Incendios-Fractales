@@ -50,8 +50,12 @@ def main():
     
     print("\n" + "="*65)
     print("PROCESO MULTITEMPORAL INTEGRAL FINALIZADO CON ÉXITO")
-    print("Revisa el archivo generado: output/mapa_riesgo_predictivo.png")
+    print("Archivos cartográficos y predictivos generados en 'output/':")
+    print("  📍 output/mapa_corrientes_prediccion.png   (Mapa GIS de Corrientes)")
+    print("  🌐 output/mapa_corrientes_interactivo.html  (Mapa Web Interactivo)")
+    print("  📊 output/mapa_riesgo_predictivo.png       (Matriz de riesgo comparativa)")
     print("="*65)
+
 
 if __name__ == "__main__":
     main()

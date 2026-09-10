@@ -112,5 +112,22 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_futuros=100):
     plt.close()
     
     print(f"Mapa de Riesgo exportado exitosamente a: {nombre_archivo}")
+    
+    # Generar transposición espacial sobre el mapa de la provincia de Corrientes
+    try:
+        from visualizador_corrientes import generar_mapas_corrientes
+        generar_mapas_corrientes(
+            matriz_inicial=matriz_inicial,
+            matriz_futura=matriz_binaria_futura,
+            mapa_riesgo=mapa_riesgo,
+            fecha_inicial=fecha_inicial,
+            fecha_final=fecha_final,
+            mejores_variables=mejores_variables,
+            pasos_futuros=pasos_futuros
+        )
+    except Exception as e:
+        print(f"Advertencia al proyectar mapa de Corrientes: {e}")
+        
     return mapa_riesgo
+
 

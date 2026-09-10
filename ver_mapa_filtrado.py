@@ -16,9 +16,10 @@ print("Construyendo geometrías espaciales...")
 geometria = [Point(xy) for xy in zip(df_pandas['longitude'], df_pandas['latitude'])]
 df_completo = gpd.GeoDataFrame(df_pandas, geometry=geometria, crs="EPSG:4326")
 
-# Constantes de la zona de estudio (Corrientes / Región de estudio)
-LAT_MIN, LAT_MAX = -30, -25
-LON_MIN, LON_MAX = -55.0, -45
+# Constantes de la zona de estudio (Provincia de Corrientes, Argentina)
+LAT_MIN, LAT_MAX = -30.8, -27.2
+LON_MIN, LON_MAX = -59.8, -55.6
+
 
 def procesar_una_fecha(fecha, df_fuente=None, verbose=True):
     """
@@ -54,8 +55,8 @@ def procesar_una_fecha(fecha, df_fuente=None, verbose=True):
     tamano_matriz = 256
     matriz_binaria = np.zeros((tamano_matriz, tamano_matriz))
     
-    lats_idx = np.floor((df_filtrado['latitude'] - LAT_MIN) / (LAT_MAX - LAT_MIN) * (tamano_matriz - 1)).astype(int)
-    lons_idx = np.floor((df_filtrado['longitude'] - LON_MIN) / (LON_MAX - LON_MIN) * (tamano_matriz - 1)).astype(int)
+    lats_idx = np.clip(np.floor((df_filtrado['latitude'] - LAT_MIN) / (LAT_MAX - LAT_MIN) * (tamano_matriz - 1)).astype(int), 0, tamano_matriz - 1)
+    lons_idx = np.clip(np.floor((df_filtrado['longitude'] - LON_MIN) / (LON_MAX - LON_MIN) * (tamano_matriz - 1)).astype(int), 0, tamano_matriz - 1)
     
     for lat_i, lon_i in zip(lats_idx, lons_idx):
         matriz_binaria[lat_i, lon_i] = 1

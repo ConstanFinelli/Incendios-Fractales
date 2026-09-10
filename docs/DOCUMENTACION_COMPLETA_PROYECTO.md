@@ -49,6 +49,19 @@ flowchart TD
         H --> I
         I --> J["Mapa de Riesgo Predictivo Multipanel (.png)"]
     end
+
+    subgraph FASE 4: Transposición Cartográfica Territorial
+        I --> K["visualizador_corrientes.py\n(Georreferenciación Departamental)"]
+        L["GeoJSON 25 Departamentos de Corrientes"] --> K
+        K --> M["Mapa GIS Estático de Corrientes\noutput/mapa_corrientes_prediccion.png"]
+        K --> N["Mapa Web Interactivo Folium Corrientes\noutput/mapa_corrientes_interactivo.html"]
+        K --> O["Ranking de Departamentos Afectados"]
+
+        I --> P["visualizador_argentina.py\n(Contexto Nacional y Regional)"]
+        Q["GeoJSON 24 Provincias de Argentina"] --> P
+        P --> R["Mapa GIS Estático de Argentina\noutput/mapa_argentina_prediccion.png"]
+        P --> S["Mapa Web Interactivo Folium Argentina\noutput/mapa_argentina_interactivo.html"]
+    end
 ```
 
 ---
@@ -119,7 +132,80 @@ El simulador implementa 3 estados físicos:
 
 ---
 
+### 3.6. Delimitación Territorial, Georreferenciación y Resolución Espacial de Corrientes
+
+Para conectar las simulaciones fractales teóricas con la gestión operativa y territorial del riesgo, el sistema define un sistema de georreferenciación estricto sobre la provincia de Corrientes:
+
+- **Coordenadas de la Zona de Estudio (Bounding Box):**
+  $$\text{LAT}_{\min} = -30.8^\circ, \quad \text{LAT}_{\max} = -27.2^\circ \quad (\text{Sur a Norte})$$
+  $$\text{LON}_{\min} = -59.8^\circ, \quad \text{LON}_{\max} = -55.6^\circ \quad (\text{Oeste a Este})$$
+  Esta delimitación geográfica encuadra de forma óptima los $88.886\text{ km}^2$ de la provincia de Corrientes, desde el límite con Entre Ríos en el sur hasta la frontera con Paraguay y Misiones en el norte, y desde el Río Paraná en el oeste hasta el Río Uruguay en el este.
+
+- **Resolución Espacial de la Grilla ($256 \times 256$ píxeles):**
+  - En el eje de latitud: $\Delta \text{lat} = \frac{3.6^\circ}{255} \approx 0.0141^\circ \approx 1.57\text{ km por celda}$.
+  - En el eje de longitud: $\Delta \text{lon} = \frac{4.2^\circ}{255} \approx 0.0165^\circ \approx 1.61\text{ km por celda}$ (evaluado a la latitud media de $-29^\circ$).
+  - **Área representada por cada píxel:** Aproximadamente $1.57 \times 1.61 \approx 2.53\text{ km}^2$ ($253\text{ hectáreas}$). Esta resolución es ideal porque captura tanto los grandes frentes de fuego como las lagunas y parches del macrosistema Iberá sin degradar el rendimiento del autómata celular.
+
+- **Fórmulas de Transformación Espacial Bidireccional:**
+  1. *De coordenadas geográficas (lat, lon) a índices de celda $(i, j)$:*
+     $$i = \text{clip}\left(\left\lfloor \frac{\text{lat} - \text{LAT}_{\min}}{\text{LAT}_{\max} - \text{LAT}_{\min}} \cdot (N - 1) \right\rfloor, 0, N - 1\right) \quad (\text{Fila / Latitud})$$
+     $$j = \text{clip}\left(\left\lfloor \frac{\text{lon} - \text{LON}_{\min}}{\text{LON}_{\max} - \text{LON}_{\min}} \cdot (N - 1) \right\rfloor, 0, N - 1\right) \quad (\text{Columna / Longitud})$$
+  2. *De índices de celda $(i, j)$ a coordenadas geográficas (lat, lon):*
+     $$\text{lat}(i) = \text{LAT}_{\min} + \frac{i}{N - 1} (\text{LAT}_{\max} - \text{LAT}_{\min})$$
+     $$\text{lon}(j) = \text{LON}_{\min} + \frac{j}{N - 1} (\text{LON}_{\max} - \text{LON}_{\min})$$
+
+- **Fundamentación Geográfica de la Máscara Provincial (`mascara_corrientes_256.npy`):**
+  Corrientes es una provincia casi enteramente mesopotámica/fluvial, delimitada por dos ríos de escala continental: el Río Paraná (al norte y oeste) y el Río Uruguay (al este). El fuego forestal no puede propagarse físicamente sobre espejos de agua de varios kilómetros de ancho para alcanzar Santa Fe, Chaco, Paraguay o Brasil. Para evitar que el autómata celular proyecte frentes de fuego irreales sobre provincias vecinas, el sistema utiliza una máscara booleana 2D construida a partir de la unión poligonal (`unary_union`) de los 25 departamentos oficiales. Todo avance proyectado fuera de este perímetro fluvial se desestima de forma automática.
+
+---
+
+### 3.7. Principales Decisiones de Diseño, Arquitectura y Cartografía
+
+El desarrollo del visualizador cartográfico y la integración del pipeline involucran una serie de decisiones clave:
+
+1. **Decisión 1: Georreferenciación Bidireccional y Orientación de Matrices (`np.flipud`):**
+   - En matrices NumPy, el índice `[0, 0]` corresponde convencionalmente a la esquina superior izquierda. Sin embargo, en el sistema de coordenadas cartográficas, la fila 0 representa el límite inferior ($\text{Sur}, \text{LAT}_{\min}$), y la fila 255 el límite superior ($\text{Norte}, \text{LAT}_{\max}$).
+   - En Matplotlib, esto se resuelve nativamente utilizando `origin='lower'` con `extent=[LON_MIN, LON_MAX, LAT_MIN, LAT_MAX]`.
+   - En bibliotecas web como Leaflet/Folium, el formato de imagen espera que la fila 0 sea el extremo norte de la bounding box. Para corregir este desfase geométrico, `visualizador_corrientes.py` aplica `np.flipud` a las imágenes RGBA generadas, garantizando una alineación geográfica exacta sobre las imágenes satelitales del terreno.
+
+2. **Decisión 2: Empaquetado Autónomo en Base64 Data URIs (Cero Enlaces Rotos):**
+   - La práctica común de generar imágenes temporales en disco (ej. `_overlay.png`) y referenciarlas desde el HTML interactivo genera enlaces rotos cuando el archivo HTML se mueve de carpeta, se comparte con otros investigadores o se visualiza en entornos remotos.
+   - Para erradicar este problema, el visualizador codifica las capas raster del fuego como Data URIs en Base64 (`data:image/png;base64,...`) e incrusta los datos directamente en el código de Leaflet. Esto genera un archivo [mapa_corrientes_interactivo.html](../output/mapa_corrientes_interactivo.html) 100% autocontenido y portátil.
+
+3. **Decisión 3: Jerarquía Visual Multicapa (Z-Ordering) y Halo Blanco (`path_effects`):**
+   - En mapas de calor o siluetas de fuego extensas, las capas raster suelen tapar las divisiones departamentales y los nombres de los municipios.
+   - Para asegurar la máxima legibilidad, se estableció un orden de capas estricto:
+     - `zorder=1`: Polígonos de fondo departamental (`#f7f9fa`).
+     - `zorder=2`: Grilla cartográfica de paralelos y meridianos.
+     - `zorder=3`: Capas raster de fuego georreferenciado (ámbar `#d35400`, carbón `#2c3e50`, carmesí `#e74c3c`).
+     - `zorder=4`: Límites departamentales en línea de trazos (`#7f8c8d`, `linestyle='--'`).
+     - `zorder=5`: Perímetro provincial consolidado (`#1a252f`, `linewidth=1.6`).
+     - `zorder=6`: Nombres de departamentos en negrita con efecto de halo blanco (`pe.withStroke(linewidth=2.2, foreground='white')`).
+
+4. **Decisión 4: Análisis de Impacto Espacial para Defensa Civil:**
+   - Para que la investigación tenga impacto práctico inmediato en la toma de decisiones, la función `identificar_departamentos_afectados` realiza una unión espacial (`gpd.sjoin`) entre cada celda activa del frente simulado y los polígonos departamentales, generando en consola un ranking de departamentos bajo amenaza con porcentaje de afectación.
+
+5. **Decisión 5: Repositorio Ultraliviano y Carga Perezosa en `.gitignore`:**
+   - Archivos vectoriales voluminosos (`departamentos_corrientes.json`, $\sim 855\text{ KB}$; `provincias_argentina.json`, $\sim 555\text{ KB}$) y matrices intermedias binarias (`.npy`) están excluidos de Git. Tanto `visualizador_corrientes.py` como `visualizador_argentina.py` descargan, optimizan y almacenan en caché local de forma transparente los recursos faltantes mediante mecanismos de resiliencia ante errores de red.
+
+6. **Decisión 6: Visualización Cartográfica Nacional Homogénea (Sin Acercamiento ni Distorsión de Enfoque):**
+   - Para mantener una estricta paridad metodológica y visual con el visualizador de Corrientes, `visualizador_argentina.py` estructura su salida estática en **tres paneles complementarios sobre el mapa completo de la República Argentina**, compartiendo todos el mismo encuadre geográfico continental ($\text{Lat } [-55.5^\circ, -21.5^\circ], \text{Lon } [-74.0^\circ, -53.0^\circ]$) y la misma escala:
+     - **Panel 1 (Foco Inicial Observado):** Muestra la República Argentina completa con el foco satelital en ámbar sobre la provincia de Corrientes.
+     - **Panel 2 (Predicción del Avance Proyectado):** Muestra el foco inicial consolidado (azul noche) y el frente de expansión futuro proyectado por el autómata celular (rojo carmesí) en el contexto nacional.
+     - **Panel 3 (Mapa de Riesgo Predictivo Integrado):** Presenta la superposición integral de focos consolidados y riesgo de avance sobre la división provincial argentina.
+   - De este modo, el usuario obtiene exactamente los mismos tres productos analíticos que en Corrientes pero a escala de todo el país, sin sesgos de zoom ni cambios de perspectiva entre paneles.
+
+7. **Decisión 7: Optimización y Disolución Topológica del GeoJSON Nacional:**
+   - El archivo vectorial oficial de departamentos de toda la Argentina (`departamentos-argentina.json`) supera los $13.7\text{ MB}$, lo cual provocaría una severa degradación en el tiempo de apertura y renderizado web en Folium y Matplotlib.
+   - La función `cargar_geometria_argentina()` descarga la geometría, agrupa y disuelve los polígonos por provincia (`dissolve(by='provincia')`), y aplica una simplificación topológica controlada (`geometry.simplify(tolerance=0.01, preserve_topology=True)`). Esto reduce el tamaño a tan solo $555\text{ KB}$ (una reducción del $96\%$), cargando en menos de $0.04\text{ s}$.
+
+8. **Decisión 8: Rotulación Provincial Vectorial con Halo Blanco Protector (`path_effects`):**
+   - Para que los nombres de las provincias se lean con máxima nitidez sin importar si se superponen con líneas de grilla o con los polígonos de las provincias vecinas, se implementó rotulación por centroides con efecto halo blanco (`pe.withStroke(linewidth=2.0, foreground='white')`), destacando a Corrientes con estrella y tipografía diferenciada.
+
+---
+
 ## 4. Catálogo Detallado de Módulos y Funciones
+
 
 A continuación se detallan todas las funciones del proyecto agrupadas por archivo.
 
@@ -378,7 +464,7 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 #### 16. `ejecutar_prediccion(datos_entrada, mejores_variables, pasos_futuros=100)`
 
-- **Motivo de creación:** Generar el producto final de prevención: reconstruye la cicatriz acumulada a partir de las fechas satelitales, inyecta las variables microclimáticas óptimas, simula hacia el futuro y exporta una imagen multipanel en alta resolución (`output/mapa_riesgo_predictivo.png`).
+- **Motivo de creación:** Generar el producto final de prevención y mitigación de catástrofes: reconstruye la cicatriz acumulada a partir de las fechas satelitales, inyecta las variables microclimáticas deducidas por el Algoritmo Genético, simula la propagación hacia el futuro y exporta una imagen multipanel en alta resolución (`output/mapa_riesgo_predictivo.png`). Adicionalmente, invoca de manera automática a los módulos de transposición cartográfica: `visualizador_corrientes.py` (proyección sobre los 25 departamentos de Corrientes) y `visualizador_argentina.py` (proyección en el contexto nacional y regional de la República Argentina).
 - **Archivos donde se utiliza:**
   - Importada y utilizada en [`main.py`](../main.py).
   - Ejecutable directamente en [`simulador_predictivo.py`](../simulador_predictivo.py).
@@ -391,15 +477,197 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 ---
 
+### Módulo: `visualizador_corrientes.py`
+
+**Motivo del módulo:** Proveer las herramientas de cartografía computacional, georreferenciación y transposición espacial necesarias para proyectar las siluetas fractales y las matrices del autómata celular directamente sobre el mapa de la provincia de Corrientes, generando salidas tanto en formato estático GIS de alta resolución (PNG a 300 DPI) como en mapas web interactivos (HTML Folium) con división departamental y capas satelitales.
+
+---
+
+#### 17. `cargar_geometria_corrientes()`
+
+- **Motivo de creación:** Cargar el GeoDataFrame oficial con los 25 departamentos de la provincia de Corrientes. Cuenta con un mecanismo de resiliencia ante errores: si el archivo local `data/departamentos_corrientes.json` no existe, lo descarga y almacena automáticamente desde repositorios abiertos oficiales.
+- **Archivos donde se utiliza:**
+  - Utilizada internamente por `cargar_mascara_provincia`, `identificar_departamentos_afectados`, `generar_mapa_estatico_corrientes` y `generar_mapa_interactivo_corrientes` en [`visualizador_corrientes.py`](../visualizador_corrientes.py).
+- **Parámetros:** Ninguno.
+- **Retorno:**
+  - (_GeoDataFrame_ | _None_): GeoDataFrame con geometrías de polígonos/multipolígonos en sistema de referencia `EPSG:4326` (WGS84). Retorna `None` en caso de fallo crítico de red y disco.
+
+---
+
+#### 18. `cargar_mascara_provincia(tamano=256)`
+
+- **Motivo de creación:** Generar o cargar desde caché una máscara booleana bidimensional ($256 \times 256$) que identifica qué celdas de la grilla caen dentro de la provincia de Corrientes. Evita que el fuego simulado cruce el Río Paraná o el Río Uruguay hacia provincias o países limítrofes.
+- **Archivos donde se utiliza:**
+  - Utilizada en [`visualizador_corrientes.py`](../visualizador_corrientes.py) en la preparación de rasters estáticos, imágenes web interactivas y cálculo de departamentos en riesgo.
+- **Parámetros:**
+  - `tamano` (_int, opcional_): Dimensión de la grilla cuadrada. Default: 256.
+- **Retorno:**
+  - (_np.ndarray 2D de bool_): Matriz donde `True` indica pertenencia al territorio correntino y `False` aguas o territorio exterior.
+
+---
+
+#### 19. `matriz_a_coordenadas(row, col, tamano=256, lat_min=LAT_MIN, lat_max=LAT_MAX, lon_min=LON_MIN, lon_max=LON_MAX)`
+
+- **Motivo de creación:** Realizar la transformación espacial directa que mapea un píxel o celda `(row, col)` del autómata celular a su coordenada geográfica real `(latitud, longitud)` en grados decimales.
+- **Archivos donde se utiliza:**
+  - Utilizada en `identificar_departamentos_afectados` en [`visualizador_corrientes.py`](../visualizador_corrientes.py).
+- **Parámetros:**
+  - `row`, `col` (_int_): Índices de fila y columna en la grilla ($0$ a $255$).
+  - `tamano` (_int, opcional_): Dimensión de la grilla. Default: 256.
+  - `lat_min`, `lat_max`, `lon_min`, `lon_max` (_float_): Coordenadas de los límites de Corrientes.
+- **Retorno:**
+  - (_tuple[float, float]_): Tupla `(latitud, longitud)` en grados decimales.
+
+---
+
+#### 20. `identificar_departamentos_afectados(matriz_fuego, gdf_corrientes=None, tamano=256, lat_min=LAT_MIN, lat_max=LAT_MAX, lon_min=LON_MIN, lon_max=LON_MAX)`
+
+- **Motivo de creación:** Evaluar el impacto territorial del avance del fuego mediante una unión espacial (`gpd.sjoin`) entre los puntos de ignición y los polígonos de los departamentos, retornando un ranking cuantificado de municipios bajo riesgo de propagación.
+- **Archivos donde se utiliza:**
+  - Utilizada en `generar_mapas_corrientes` en [`visualizador_corrientes.py`](../visualizador_corrientes.py).
+- **Parámetros:**
+  - `matriz_fuego` (_np.ndarray 2D_): Matriz con las celdas quemadas o proyectadas.
+  - `gdf_corrientes` (_GeoDataFrame, opcional_): Geometrías departamentales cargadas previamente.
+  - `tamano`, `lat_min`, `lat_max`, `lon_min`, `lon_max`: Parámetros geográficos de la grilla.
+- **Retorno:**
+  - (_list[dict]_): Lista de diccionarios ordenados por criticidad: `[{'departamento': str, 'celdas': int, 'porcentaje': float}, ...]`.
+
+---
+
+#### 21. `_crear_data_uri_rgba(matriz, color_rgb=(231, 76, 60), alfa=220, aplicar_mascara_provincia=True)`
+
+- **Motivo de creación:** Convertir una matriz binaria en una imagen PNG en memoria codificada como Data URI en Base64 (`data:image/png;base64,...`), aplicando `np.flipud` para alinear la orientación norte/sur con Folium. Garantiza que el mapa interactivo HTML sea 100% independiente de archivos externos.
+- **Archivos donde se utiliza:**
+  - Utilizada en `generar_mapa_interactivo_corrientes` en [`visualizador_corrientes.py`](../visualizador_corrientes.py).
+- **Parámetros:**
+  - `matriz` (_np.ndarray 2D_): Matriz binaria a convertir.
+  - `color_rgb` (_tuple[int, int, int]_): Color de la capa en formato RGB.
+  - `alfa` (_int_): Nivel de opacidad de la capa ($0$ a $255$).
+  - `aplicar_mascara_provincia` (_bool_): Si es `True`, hace transparente cualquier píxel fuera de Corrientes.
+- **Retorno:**
+  - (_str_): Cadena Data URI en formato Base64.
+
+---
+
+#### 22. `generar_mapa_estatico_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_corrientes_prediccion.png")`
+
+- **Motivo de creación:** Generar la pieza gráfica principal del proyecto: una figura cartográfica de 3 paneles en alta resolución (300 DPI) con la base de Corrientes, el foco inicial, el frente de avance futuro y el mapa de riesgo integrado, con rótulos de departamentos protegidos por halo blanco (`path_effects`).
+- **Archivos donde se utiliza:**
+  - Utilizada en `generar_mapas_corrientes` en [`visualizador_corrientes.py`](../visualizador_corrientes.py).
+- **Parámetros:**
+  - `matriz_inicial`, `matriz_futura`, `mapa_riesgo`: Matrices generadas en las fases anteriores.
+  - `fecha_inicial`, `fecha_final`: Fechas de la serie temporal analizada.
+  - `mejores_variables`: Cromosoma climático inferido `[v, dir, hum, comb]`.
+  - `pasos_futuros`: Ciclos temporales proyectados hacia el futuro.
+  - `ruta_salida`: Destino del archivo PNG exportado.
+- **Retorno:**
+  - (_str_): Ruta absoluta/relativa del archivo guardado.
+
+---
+
+#### 23. `generar_mapa_interactivo_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_corrientes_interactivo.html")`
+
+- **Motivo de creación:** Construir un mapa web interactivo en Folium/Leaflet con capas intercambiables (Positron, OpenStreetMap, Satélite Esri World Imagery), polígonos departamentales con tooltip interactivo (nombre y cabecera), capas raster de fuego en Base64 y leyenda flotante con datos climáticos.
+- **Archivos donde se utiliza:**
+  - Utilizada en `generar_mapas_corrientes` en [`visualizador_corrientes.py`](../visualizador_corrientes.py).
+- **Parámetros:** Idem a `generar_mapa_estatico_corrientes`.
+- **Retorno:**
+  - (_str_): Ruta del archivo `.html` exportado.
+
+---
+
+#### 24. `generar_mapas_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100)`
+
+- **Motivo de creación:** Función orquestadora central de la Fase 4. Ejecuta secuencialmente la identificación de departamentos en riesgo, genera el mapa estático GIS (`.png`), crea el mapa interactivo web (`.html`), imprime el reporte en consola y devuelve las rutas generadas.
+- **Archivos donde se utiliza:**
+  - Importada y llamada desde `ejecutar_prediccion` en [`simulador_predictivo.py`](../simulador_predictivo.py).
+- **Parámetros:** Mismos parámetros que las funciones cartográficas.
+- **Retorno:**
+  - (_dict_): Diccionario con las claves: `{'mapa_estatico': str, 'mapa_interactivo': str, 'departamentos_afectados': list}`.
+
+---
+
+### Módulo: `visualizador_argentina.py`
+
+**Motivo del módulo:** Proveer las herramientas de transposición cartográfica y espacial para contextualizar el foco de incendio y su proyección predictiva a escala de la **República Argentina**, ofreciendo visualizaciones tanto a nivel continental nacional como con zoom regional sobre el Litoral / Mesopotamia (evaluando la proximidad y amenaza hacia provincias limítrofes como Chaco, Santa Fe, Entre Ríos y Misiones). Genera salidas en formato estático GIS (300 DPI) y web interactivo en Folium.
+
+---
+
+#### 25. `cargar_geometria_argentina()`
+
+- **Motivo de creación:** Obtener el GeoDataFrame simplificado y optimizado de las 24 provincias/jurisdicciones de la República Argentina. Si el archivo local `data/provincias_argentina.json` no existe, descarga los departamentos oficiales desde GitHub, disuelve las divisiones por provincia (`dissolve`), aplica simplificación topológica (`simplify(tolerance=0.01)`) reduciendo el peso de $13.7\text{ MB}$ a $555\text{ KB}$, y guarda el resultado en caché local para lecturas ultra-rápidas.
+- **Archivos donde se utiliza:**
+  - Utilizada en `generar_mapa_estatico_argentina` y `generar_mapa_interactivo_argentina` en [`visualizador_argentina.py`](../visualizador_argentina.py).
+- **Parámetros:** Ninguno.
+- **Retorno:**
+  - (_GeoDataFrame_ | _None_): Capa vectorial de provincias argentinas con CRS EPSG:4326.
+
+---
+
+#### 26. `_crear_data_uri_rgba_argentina(matriz, color_rgb=(231, 76, 60), alfa=220)`
+
+- **Motivo de creación:** Convertir matrices de fuego o riesgo en imágenes RGBA en memoria y codificarlas como Data URIs en Base64 (`data:image/png;base64,...`) con orientación geográfica invertida (`np.flipud`) para Folium, aplicando opcionalmente la máscara provincial de Corrientes para evitar desbordes irreales sobre los ríos Paraná y Uruguay.
+- **Archivos donde se utiliza:**
+  - Utilizada internamente en `generar_mapa_interactivo_argentina` en [`visualizador_argentina.py`](../visualizador_argentina.py).
+- **Parámetros:**
+  - `matriz` (_np.ndarray 2D_): Matriz binaria a convertir.
+  - `color_rgb` (_tuple[int, int, int]_): Color RGB asignado a la capa.
+  - `alfa` (_int_): Nivel de opacidad ($0$ a $255$).
+- **Retorno:**
+  - (_str_): Cadena Data URI en formato Base64.
+
+---
+
+#### 27. `generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_argentina_prediccion.png")`
+
+- **Motivo de creación:** Generar la pieza cartográfica GIS a escala nacional en alta resolución (300 DPI) estructurada en 3 paneles que reproducen exactamente las tres etapas de Corrientes sobre el mapa completo de la República Argentina (sin acercamiento ni distorsión de enfoque):
+  1. *Foco Inicial Observado:* Foco satelital sobre el territorio continental argentino.
+  2. *Predicción del Avance Proyectado:* Foco inicial observado y frente de avance futuro proyectado (+N ciclos del autómata celular).
+  3. *Mapa de Riesgo Predictivo Integrado:* Superposición de focos consolidados y zonas de riesgo de avance sobre la división provincial del país.
+- **Archivos donde se utiliza:**
+  - Utilizada en `generar_mapas_argentina` en [`visualizador_argentina.py`](../visualizador_argentina.py).
+- **Parámetros:**
+  - `matriz_inicial`, `matriz_futura`, `mapa_riesgo`: Matrices de simulación y observación satelital.
+  - `fecha_inicial`, `fecha_final`: Fechas de la serie temporal analizada.
+  - `mejores_variables`: Cromosoma óptimo inferido por el AG.
+  - `pasos_futuros`: Pasos de simulación futura proyectados.
+  - `ruta_salida`: Ruta de exportación del archivo PNG.
+- **Retorno:**
+  - (_str_): Ruta del archivo PNG generado.
+
+---
+
+#### 28. `generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_argentina_interactivo.html")`
+
+- **Motivo de creación:** Construir una aplicación web interactiva en Folium a escala de la República Argentina, con capas base (CartoDB Positron, OpenStreetMap, Esri Satélite), división provincial con tooltips dinámicos, capas raster de fuego en Base64, MiniMapa de orientación, selector de capas y leyenda flotante con las variables climáticas inferidas.
+- **Archivos donde se utiliza:**
+  - Utilizada en `generar_mapas_argentina` en [`visualizador_argentina.py`](../visualizador_argentina.py).
+- **Parámetros:** Mismos parámetros que `generar_mapa_estatico_argentina`.
+- **Retorno:**
+  - (_str_): Ruta del archivo HTML exportado.
+
+---
+
+#### 29. `generar_mapas_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100)`
+
+- **Motivo de creación:** Función orquestadora principal para la cartografía nacional. Ejecuta secuencialmente la generación del mapa estático GIS (`output/mapa_argentina_prediccion.png`) y del mapa web interactivo (`output/mapa_argentina_interactivo.html`), retornando un diccionario con las rutas de los productos generados.
+- **Archivos donde se utiliza:**
+  - Importada y llamada desde `ejecutar_prediccion` en [`simulador_predictivo.py`](../simulador_predictivo.py).
+- **Parámetros:** Mismos parámetros de simulación y climáticos.
+- **Retorno:**
+  - (_dict_): Diccionario `{'mapa_estatico_argentina': str, 'mapa_interactivo_argentina': str}`.
+
+---
+
 ### Módulo: `main.py`
 
 **Motivo del módulo:** Orquestar de punta a punta todo el pipeline del sistema.
 
 ---
 
-#### 17. `main()`
+#### 30. `main()`
 
-- **Motivo de creación:** Punto de entrada de la aplicación interactiva para el usuario. Solicita las fechas, dispara la extracción satelital (Fase 1), la optimización inversa por AG (Fase 2) y la predicción preventiva de riesgo (Fase 3).
+- **Motivo de creación:** Punto de entrada interactivo de la aplicación para el usuario. Solicita las fechas del incendio, dispara la extracción satelital (Fase 1), la optimización inversa por AG (Fase 2), la predicción de riesgo por AC (Fase 3) y reporta las rutas de todos los mapas generados tanto para Corrientes como para la República Argentina (Fase 4).
 - **Archivos donde se utiliza:**
   - Punto de entrada principal en [`main.py`](../main.py).
 - **Parámetros:** Ninguno.
@@ -409,38 +677,56 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 ## 5. Tabla Resumen de Funciones
 
-| #   | Función                         | Archivo                         | Parámetros Clave                                   | Retorno                    | Utilizado en                                                              |
-| :-- | :------------------------------ | :------------------------------ | :------------------------------------------------- | :------------------------- | :------------------------------------------------------------------------ |
-| 1   | `procesar_una_fecha`            | `ver_mapa_filtrado.py`          | `fecha, df_fuente, verbose`                        | Ruta `.npy` / `None`       | `ver_mapa_filtrado.py`, `main.py`                                         |
-| 2   | `procesar_rango_fechas`         | `ver_mapa_filtrado.py`          | `fecha_inicio, fecha_fin`                          | `list[(fecha, ruta)]`      | `main.py`                                                                 |
-| 3   | `procesar_fecha`                | `ver_mapa_filtrado.py`          | `fecha_elegida`                                    | Ruta `.npy` / `None`       | `main.py`, CLI                                                            |
-| 4   | `extraer_perimetro`             | `calcular_dimension_fractal.py` | `matriz_binaria`                                   | `np.ndarray` (borde)       | `calcular_dimension_fractal.py`, `algoritmo_genetico.py`                  |
-| 5   | `calcular_box_counting`         | `calcular_dimension_fractal.py` | `matriz_perimetro`                                 | `(D, x, y, sizes, counts)` | `calcular_dimension_fractal.py`, `algoritmo_genetico.py`                  |
-| 6   | `_avanzar_pasos_AC`             | `automata_celular.py`           | `grilla, v, dir, hum, comb, steps`                 | `np.ndarray`               | `automata_celular.py`, `algoritmo_genetico.py`                            |
-| 7   | `simular_incendio_AC`           | `automata_celular.py`           | `v, dir, hum, comb, steps, grilla_ini`             | `(grilla, matriz_binaria)` | `automata_celular.py`, `algoritmo_genetico.py`, `simulador_predictivo.py` |
-| 8   | `simular_evolucion_multietapa`  | `automata_celular.py`           | `v, dir, hum, comb, grilla_ini, pasos_dia, etapas` | `(grilla, list[matrices])` | `automata_celular.py`                                                     |
-| 9   | `cargar_datos_serie_temporal`   | `algoritmo_genetico.py`         | `entradas`                                         | `list[dict]`               | `algoritmo_genetico.py`                                                   |
-| 10  | `generar_individuo`             | `algoritmo_genetico.py`         | Ninguno                                            | `[v, dir, hum, comb]`      | `algoritmo_genetico.py`                                                   |
-| 11  | `evaluar_fitness_multitemporal` | `algoritmo_genetico.py`         | `individuo, datos_serie, pasos_por_dia, n_sims`    | `float` ($[0, 1]$)         | `algoritmo_genetico.py`                                                   |
-| 12  | `cruzar`                        | `algoritmo_genetico.py`         | `padre1, padre2`                                   | `(hijo1, hijo2)`           | `algoritmo_genetico.py`                                                   |
-| 13  | `mutar`                         | `algoritmo_genetico.py`         | `individuo`                                        | `individuo`                | `algoritmo_genetico.py`                                                   |
-| 14  | `seleccion_torneo`              | `algoritmo_genetico.py`         | `fitness_poblacion, k=3`                           | `individuo_ganador`        | `algoritmo_genetico.py`                                                   |
-| 15  | `ejecutar_algoritmo_genetico`   | `algoritmo_genetico.py`         | `entradas_matrices`                                | `mejor_individuo`          | `main.py`, `algoritmo_genetico.py`                                        |
-| 16  | `ejecutar_prediccion`           | `simulador_predictivo.py`       | `datos_entrada, variables, pasos_futuros`          | `mapa_riesgo`              | `main.py`, `simulador_predictivo.py`                                      |
-| 17  | `main`                          | `main.py`                       | Ninguno                                            | `None`                     | `main.py` (Entrypoint)                                                    |
+| #   | Función                              | Archivo                         | Parámetros Clave                                   | Retorno                    | Utilizado en                                                              |
+| :-- | :----------------------------------- | :------------------------------ | :------------------------------------------------- | :------------------------- | :------------------------------------------------------------------------ |
+| 1   | `procesar_una_fecha`                 | `ver_mapa_filtrado.py`          | `fecha, df_fuente, verbose`                        | Ruta `.npy` / `None`       | `ver_mapa_filtrado.py`, `main.py`                                         |
+| 2   | `procesar_rango_fechas`              | `ver_mapa_filtrado.py`          | `fecha_inicio, fecha_fin`                          | `list[(fecha, ruta)]`      | `main.py`                                                                 |
+| 3   | `procesar_fecha`                     | `ver_mapa_filtrado.py`          | `fecha_elegida`                                    | Ruta `.npy` / `None`       | `main.py`, CLI                                                            |
+| 4   | `extraer_perimetro`                  | `calcular_dimension_fractal.py` | `matriz_binaria`                                   | `np.ndarray` (borde)       | `calcular_dimension_fractal.py`, `algoritmo_genetico.py`                  |
+| 5   | `calcular_box_counting`              | `calcular_dimension_fractal.py` | `matriz_perimetro`                                 | `(D, x, y, sizes, counts)` | `calcular_dimension_fractal.py`, `algoritmo_genetico.py`                  |
+| 6   | `_avanzar_pasos_AC`                  | `automata_celular.py`           | `grilla, v, dir, hum, comb, steps`                 | `np.ndarray`               | `automata_celular.py`, `algoritmo_genetico.py`                            |
+| 7   | `simular_incendio_AC`                | `automata_celular.py`           | `v, dir, hum, comb, steps, grilla_ini`             | `(grilla, matriz_binaria)` | `automata_celular.py`, `algoritmo_genetico.py`, `simulador_predictivo.py` |
+| 8   | `simular_evolucion_multietapa`       | `automata_celular.py`           | `v, dir, hum, comb, grilla_ini, pasos_dia, etapas` | `(grilla, list[matrices])` | `automata_celular.py`                                                     |
+| 9   | `cargar_datos_serie_temporal`        | `algoritmo_genetico.py`         | `entradas`                                         | `list[dict]`               | `algoritmo_genetico.py`                                                   |
+| 10  | `generar_individuo`                  | `algoritmo_genetico.py`         | Ninguno                                            | `[v, dir, hum, comb]`      | `algoritmo_genetico.py`                                                   |
+| 11  | `evaluar_fitness_multitemporal`      | `algoritmo_genetico.py`         | `individuo, datos_serie, pasos_por_dia, n_sims`    | `float` ($[0, 1]$)         | `algoritmo_genetico.py`                                                   |
+| 12  | `cruzar`                             | `algoritmo_genetico.py`         | `padre1, padre2`                                   | `(hijo1, hijo2)`           | `algoritmo_genetico.py`                                                   |
+| 13  | `mutar`                              | `algoritmo_genetico.py`         | `individuo`                                        | `individuo`                | `algoritmo_genetico.py`                                                   |
+| 14  | `seleccion_torneo`                   | `algoritmo_genetico.py`         | `fitness_poblacion, k=3`                           | `individuo_ganador`        | `algoritmo_genetico.py`                                                   |
+| 15  | `ejecutar_algoritmo_genetico`        | `algoritmo_genetico.py`         | `entradas_matrices`                                | `mejor_individuo`          | `main.py`, `algoritmo_genetico.py`                                        |
+| 16  | `ejecutar_prediccion`                | `simulador_predictivo.py`       | `datos_entrada, variables, pasos_futuros`          | `mapa_riesgo`              | `main.py`, `simulador_predictivo.py`                                      |
+| 17  | `cargar_geometria_corrientes`        | `visualizador_corrientes.py`    | Ninguno                                            | `GeoDataFrame`             | `visualizador_corrientes.py`                                              |
+| 18  | `cargar_mascara_provincia`           | `visualizador_corrientes.py`    | `tamano=256`                                       | `np.ndarray` (bool)        | `visualizador_corrientes.py`                                              |
+| 19  | `matriz_a_coordenadas`               | `visualizador_corrientes.py`    | `row, col, tamano, lat_bounds, lon_bounds`         | `(lat, lon)`               | `visualizador_corrientes.py`                                              |
+| 20  | `identificar_departamentos_afectados`| `visualizador_corrientes.py`    | `matriz_fuego, gdf_corrientes, tamano, ...`        | `list[dict]` (ranking)     | `visualizador_corrientes.py`                                              |
+| 21  | `_crear_data_uri_rgba`               | `visualizador_corrientes.py`    | `matriz, color_rgb, alfa, mascara_prov`            | `str` (Data URI Base64)    | `visualizador_corrientes.py`                                              |
+| 22  | `generar_mapa_estatico_corrientes`   | `visualizador_corrientes.py`    | `m_ini, m_fut, m_riesgo, fechas, clima, pasos`     | `str` (ruta PNG)           | `visualizador_corrientes.py`                                              |
+| 23  | `generar_mapa_interactivo_corrientes` | `visualizador_corrientes.py`    | `m_ini, m_fut, m_riesgo, fechas, clima, pasos`     | `str` (ruta HTML)          | `visualizador_corrientes.py`                                              |
+| 24  | `generar_mapas_corrientes`           | `visualizador_corrientes.py`    | `m_ini, m_fut, m_riesgo, fechas, clima, pasos`     | `dict` (rutas y ranking)   | `simulador_predictivo.py`                                                 |
+| 25  | `cargar_geometria_argentina`         | `visualizador_argentina.py`     | Ninguno                                            | `GeoDataFrame`             | `visualizador_argentina.py`                                               |
+| 26  | `_crear_data_uri_rgba_argentina`     | `visualizador_argentina.py`     | `matriz, color_rgb, alfa`                          | `str` (Data URI Base64)    | `visualizador_argentina.py`                                               |
+| 27  | `generar_mapa_estatico_argentina`   | `visualizador_argentina.py`     | `m_ini, m_fut, m_riesgo, fechas, clima, pasos`     | `str` (ruta PNG)           | `visualizador_argentina.py`                                               |
+| 28  | `generar_mapa_interactivo_argentina` | `visualizador_argentina.py`     | `m_ini, m_fut, m_riesgo, fechas, clima, pasos`     | `str` (ruta HTML)          | `visualizador_argentina.py`                                               |
+| 29  | `generar_mapas_argentina`            | `visualizador_argentina.py`     | `m_ini, m_fut, m_riesgo, fechas, clima, pasos`     | `dict` (rutas de mapas)    | `simulador_predictivo.py`                                                 |
+| 30  | `main`                               | `main.py`                       | Ninguno                                            | `None`                     | `main.py` (Entrypoint)                                                    |
 
 ---
 
-## 6. Guía de Ejecución Rápida
+## 6. Guía de Ejecución Rápida y Salidas Generadas
 
 1. **Ejecución estándar interactiva:**
    ```bash
    python main.py
    ```
-2. **Ingreso de parámetros de prueba:**
+2. **Ingreso de parámetros de prueba recomendados (Megaincendio de Corrientes 2022):**
    - **Fecha Inicial:** `2022-02-17`
-   - **Fecha Final:** `2022-02-19`
-3. **Archivos de salida generados:**
-   - `output/matriz_objetivo_limpia_AAAA-MM-DD.npy`: Matrices binarias rasterizadas del satélite.
-   - `output/silueta_fractal_limpia_AAAA-MM-DD.png`: Siluetas morfológicas del incendio.
-   - `output/mapa_riesgo_predictivo.png`: Mapa comparativo final con la proyección del riesgo de avance.
+   - **Fecha Final:** `2022-02-19` (o presionar Enter para analizar solo el día inicial)
+3. **Archivos de salida generados en la carpeta `output/`:**
+   - **📍 `output/mapa_corrientes_prediccion.png`:** Mapa GIS de alta resolución (300 DPI) con 3 paneles comparativos que muestran el foco inicial satelital, la predicción de avance futuro y la superposición de riesgo sobre los 25 departamentos de Corrientes.
+   - **🌐 `output/mapa_corrientes_interactivo.html`:** Mapa web interactivo en Folium de Corrientes con selector de capas (CartoDB, OpenStreetMap y Satélite Esri), límites departamentales con tooltips interactivos y capas de fuego georreferenciadas autónomas.
+   - **🇦🇷 `output/mapa_argentina_prediccion.png`:** Mapa cartográfico GIS (300 DPI) con los 3 paneles análogos a Corrientes (Foco Inicial, Predicción de Avance y Mapa de Riesgo Integrado) sobre el mapa completo de la República Argentina, manteniendo la misma vista nacional sin acercamientos ni distorsiones de enfoque.
+   - **🌐 `output/mapa_argentina_interactivo.html`:** Mapa web interactivo en Folium de la República Argentina con división provincial oficial, capas satelitales, minimapa y leyenda climatológica flotante.
+   - **📊 `output/mapa_riesgo_predictivo.png`:** Matriz comparativa de riesgo del simulador.
+   - **💾 `output/matriz_objetivo_limpia_AAAA-MM-DD.npy`:** Matrices binarias rasterizadas y filtradas de la base de la NASA.
+   - **🖼️ `output/silueta_fractal_limpia_AAAA-MM-DD.png`:** Siluetas fractales continuas del cuerpo principal de fuego.
+

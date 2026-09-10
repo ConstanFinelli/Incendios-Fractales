@@ -128,6 +128,22 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_futuros=100):
     except Exception as e:
         print(f"Advertencia al proyectar mapa de Corrientes: {e}")
         
+    # Generar transposición espacial sobre el mapa de la República Argentina
+    try:
+        from visualizador_argentina import generar_mapas_argentina
+        generar_mapas_argentina(
+            matriz_inicial=matriz_inicial,
+            matriz_futura=matriz_binaria_futura,
+            mapa_riesgo=mapa_riesgo,
+            fecha_inicial=fecha_inicial,
+            fecha_final=fecha_final,
+            mejores_variables=mejores_variables,
+            pasos_futuros=pasos_futuros
+        )
+    except Exception as e:
+        print(f"Advertencia al proyectar mapa de Argentina: {e}")
+        
     return mapa_riesgo
+
 
 

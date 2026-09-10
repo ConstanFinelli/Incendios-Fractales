@@ -1,0 +1,23 @@
+# ==============================================================================
+# Modelado Fractal y Predicción de Incendios mediante Algoritmos Genéticos
+# Instalación: pip install -r requirements.txt
+# ==============================================================================
+
+# Procesamiento numérico y operaciones matriciales
+numpy>=1.24.0
+
+# Manipulación de datos tabulares y geoespaciales (NASA FIRMS)
+pandas>=2.0.0
+geopandas>=1.0.0
+shapely>=2.0.0
+
+# Operaciones morfológicas y análisis científico (Erosión, Dilatación, Componentes Conectados)
+scipy>=1.11.0
+
+# Visualización, siluetas fractales y mapas de riesgo predictivo
+matplotlib>=3.7.0
+
+# Generación de mapas interactivos HTML y clasificación
+folium>=0.15.0
+mapclassify>=2.6.0
+

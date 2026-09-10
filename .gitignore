@@ -2,6 +2,7 @@
 *.png
 *.npy
 *.csv
+*.json
 
 
 __pycache__

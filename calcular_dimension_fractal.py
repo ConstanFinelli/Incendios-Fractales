@@ -16,37 +16,33 @@ def extraer_perimetro(matriz_binaria):
 
 def calcular_box_counting(matriz_perimetro):
     """
-    Aplica el algoritmo de Box-Counting sobre una matriz binaria (perímetro).
+    Aplica el algoritmo de Box-Counting de alta velocidad (Vectorizado 100% NumPy).
     Retorna la dimensión fractal (D), los tamaños de caja y los conteos.
     """
-    # Aseguramos que la matriz sea de tamaño 256x256
     n = min(matriz_perimetro.shape)
     
     tamanos_caja = []
     conteos_cajas = []
     
-    # Tamaños de caja desde n (256) reduciéndose a la mitad hasta 1
     tamano = n
     while tamano >= 1:
-        contador = 0
-        # Recorremos la matriz en "saltos" del tamaño de la caja actual
-        for i in range(0, n, tamano):
-            for j in range(0, n, tamano):
-                # Si hay al menos un '1' (borde de fuego) en esta caja, la contamos
-                if np.any(matriz_perimetro[i:i+tamano, j:j+tamano]):
-                    contador += 1
-                    
+        if tamano == n:
+            contador = 1 if np.any(matriz_perimetro) else 0
+        elif tamano == 1:
+            contador = np.count_nonzero(matriz_perimetro)
+        else:
+            # Reshape matricial en bloques 2D sin bucles Python (Ultra rápido en C)
+            bloques = matriz_perimetro.reshape(n // tamano, tamano, n // tamano, tamano).any(axis=(1, 3))
+            contador = np.count_nonzero(bloques)
+            
         tamanos_caja.append(tamano)
         conteos_cajas.append(contador)
-        
-        tamano = tamano // 2 # Reducir caja a la mitad
+        tamano = tamano // 2
         
     # Calcular la regresión lineal en escala Log-Log
-    # Ecuación: log(N) = D * log(1/s) 
     x = np.log(1.0 / np.array(tamanos_caja))
-    y = np.log(conteos_cajas)
+    y = np.log(np.maximum(conteos_cajas, 1))
     
-    # polyfit devuelve [pendiente, intersección_y]
     coeficientes = np.polyfit(x, y, 1)
     dimension_fractal = coeficientes[0]
     

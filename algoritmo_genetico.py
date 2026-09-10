@@ -1,8 +1,9 @@
 import numpy as np
 import random
 import os
-import multiprocessing
-from functools import partial
+import csv
+import matplotlib.pyplot as plt
+from concurrent.futures import ProcessPoolExecutor
 from automata_celular import simular_incendio_AC, _avanzar_pasos_AC
 from calcular_dimension_fractal import extraer_perimetro, calcular_box_counting
 
@@ -12,8 +13,12 @@ from calcular_dimension_fractal import extraer_perimetro, calcular_box_counting
 TAMANO_POBLACION = 20        # Cantidad de hipótesis climáticas por generación
 GENERACIONES = 40             # Número de iteraciones evolutivas
 PROB_MUTACION = 0.2          # Probabilidad de mutar un gen
-PASOS_POR_DIA = 30           # CONSTANTE: Pasos de simulación del AC por día calendario (fácil de modificar)
+PASOS_POR_DIA = 30         # CONSTANTE: Pasos de simulación del AC por día calendario (fácil de modificar)
 NUM_SIMULACIONES = 3         # Cantidad de corridas Monte Carlo por individuo para mitigar ruido
+
+# PONDERACIÓN DE LA FUNCIÓN DE APTITUD (FITNESS HÍBRIDO)
+PESO_FRACTAL = 0.5           # Peso asignado a la Dimensión Fractal del perímetro
+PESO_IOU = 0.5               # Peso asignado a la Superposición Espacial (IoU)
 
 def cargar_datos_serie_temporal(entradas):
     """
@@ -25,7 +30,6 @@ def cargar_datos_serie_temporal(entradas):
       - Una lista de tuplas: [("2022-02-17", "output/matriz_...npy"), ...]
     """
     if isinstance(entradas, str):
-        # Modo día único
         entradas = [("Día_Único", entradas)]
         
     datos_serie = []
@@ -115,7 +119,7 @@ def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_PO
             interseccion = np.logical_and(matriz_real > 0, matriz_binaria > 0).sum()
             union = np.logical_or(matriz_real > 0, matriz_binaria > 0).sum()
             iou = (interseccion / union) if union > 0 else 0.0
-            suma_fitness += (0.5 * fitness_fractal) + (0.5 * iou)
+            suma_fitness += (PESO_FRACTAL * fitness_fractal) + (PESO_IOU * iou)
             
         return suma_fitness / num_simulaciones
         
@@ -162,13 +166,24 @@ def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_PO
             iou = (interseccion / union) if union > 0 else 0.0
             
             # 3. Fitness híbrido de la etapa
-            fit_etapa = (0.4 * fitness_fractal) + (0.6 * iou)
+            fit_etapa = (PESO_FRACTAL * fitness_fractal) + (PESO_IOU * iou)
             fitness_por_etapa.append(fit_etapa)
             
         # Promedio del fitness entre todas las transiciones diarias de esta simulación
         suma_fitness_runs += np.mean(fitness_por_etapa)
         
     return suma_fitness_runs / num_simulaciones
+
+def _evaluar_individuo_worker(args):
+    """Función de nivel superior para ejecución limpia y sin problemas de serialización en Windows."""
+    individuo, datos_serie, pasos_por_dia, num_simulaciones = args
+    fit = evaluar_fitness_multitemporal(
+        individuo=individuo,
+        datos_serie=datos_serie,
+        pasos_por_dia=pasos_por_dia,
+        num_simulaciones=num_simulaciones
+    )
+    return (individuo, fit)
 
 def cruzar(padre1, padre2):
     """Cruce de un punto."""
@@ -197,14 +212,73 @@ def seleccion_torneo(fitness_poblacion, k=3):
     participantes.sort(key=lambda x: x[1], reverse=True)
     return participantes[0][0]
 
+def guardar_grafico_fitness(historial, ruta_salida='output/curva_fitness.png'):
+    """Genera y guarda el gráfico de convergencia del mejor fitness y fitness promedio."""
+    generaciones = [h['generacion'] for h in historial]
+    mejores = [h['mejor_fitness'] for h in historial]
+    promedios = [h['promedio_fitness'] for h in historial]
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(generaciones, mejores, 'g-o', linewidth=2, label='Mejor Fitness')
+    plt.plot(generaciones, promedios, 'b--s', linewidth=1.5, label='Fitness Promedio')
+    plt.title(f"Evolución del Fitness por Generación (Ponderación {PESO_FRACTAL}*Fractal + {PESO_IOU}*IoU)", fontsize=13, pad=15)
+    plt.xlabel("Generación", fontsize=12)
+    plt.ylabel(f"Fitness Híbrido ({PESO_FRACTAL}*Fractal + {PESO_IOU}*IoU)", fontsize=12)
+    plt.ylim(0.0, 1.0)
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.legend(fontsize=11)
+    plt.tight_layout()
+    
+    os.makedirs(os.path.dirname(ruta_salida), exist_ok=True)
+    plt.savefig(ruta_salida, dpi=300)
+    plt.close()
+    print(f" -> Gráfica de convergencia exportada a: {ruta_salida}")
+
+def guardar_csv_resultados(historial, mejor_individuo, mejor_fitness):
+    """Exporta el historial de telemetría y el resultado final a archivos CSV."""
+    os.makedirs('output', exist_ok=True)
+    
+    ruta_historial = 'output/historial_fitness.csv'
+    with open(ruta_historial, mode='w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Generacion', 'Mejor_Fitness', 'Promedio_Fitness', 'Viento_Vel_kmh', 'Viento_Dir_deg', 'Humedad_pct', 'Combustible'])
+        for h in historial:
+            writer.writerow([
+                h['generacion'],
+                f"{h['mejor_fitness']:.6f}",
+                f"{h['promedio_fitness']:.6f}",
+                f"{h['viento_vel']:.2f}",
+                f"{h['viento_dir']:.2f}",
+                f"{h['humedad']:.2f}",
+                f"{h['combustible']:.3f}"
+            ])
+    print(f" -> Historial de fitness exportado a: {ruta_historial}")
+
+    ruta_resumen = 'output/resultados_optimizacion.csv'
+    with open(ruta_resumen, mode='w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Parametro', 'Valor_Inferido', 'Unidad'])
+        writer.writerow(['Mejor_Fitness_Alcanzado', f"{mejor_fitness:.6f}", "Índice (0-1)"])
+        writer.writerow(['Velocidad_Viento', f"{mejor_individuo[0]:.2f}", "km/h"])
+        writer.writerow(['Direccion_Viento', f"{mejor_individuo[1]:.2f}", "grados azimutales"])
+        writer.writerow(['Humedad_Relativa', f"{mejor_individuo[2]:.2f}", "%"])
+        writer.writerow(['Carga_Combustible', f"{mejor_individuo[3]:.3f}", "índice (0.1-1.0)"])
+        writer.writerow(['Peso_Fractal_Utilizado', f"{PESO_FRACTAL:.2f}", "ponderación"])
+        writer.writerow(['Peso_IoU_Utilizado', f"{PESO_IOU:.2f}", "ponderación"])
+    print(f" -> Resultados finales de optimización exportados a: {ruta_resumen}")
+
 def ejecutar_algoritmo_genetico(entradas_matrices):
     """
-    Ejecuta el Algoritmo Genético de Optimización Inversa Multitemporal.
-    Acepta una ruta única o una lista de tuplas [(fecha, ruta), ...].
+    Ejecuta el Algoritmo Genético de Optimización Inversa Multitemporal con evaluación multinúcleo en paralelo.
     """
+    num_cpus = os.cpu_count() or 4
+    num_workers = max(1, num_cpus - 1)
+    
     print("="*60)
-    print("INICIANDO OPTIMIZACIÓN INVERSA POR ALGORITMO GENÉTICO")
+    print("INICIANDO OPTIMIZACIÓN INVERSA PARALELA POR ALGORITMO GENÉTICO")
     print(f"Configuración: {GENERACIONES} Generaciones | {TAMANO_POBLACION} Individuos | {PASOS_POR_DIA} Pasos/Día")
+    print(f"Ponderación Fitness: {PESO_FRACTAL} * Dimensión Fractal + {PESO_IOU} * IoU Espacial")
+    print(f"Aceleración por Multiprocesamiento: {num_workers} núcleos CPU activos")
     print("="*60)
     
     # 1. Cargar datos de la serie temporal
@@ -221,27 +295,33 @@ def ejecutar_algoritmo_genetico(entradas_matrices):
     poblacion = [generar_individuo() for _ in range(TAMANO_POBLACION)]
     mejor_individuo_global = None
     mejor_fitness_global = -1.0
+    historial_telemetria = []
     
-    # 3. Bucle evolutivo
-    num_cpus = max(1, multiprocessing.cpu_count() - 1)  # Dejar un núcleo libre para el SO
-    eval_func = partial(evaluar_fitness_multitemporal, datos_serie=datos_serie, pasos_por_dia=PASOS_POR_DIA)
-    
-    with multiprocessing.Pool(processes=num_cpus) as pool:
+    # 3. Bucle evolutivo multinúcleo
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
         for generacion in range(GENERACIONES):
-            # Evaluar el fitness de toda la población en paralelo
-            fitness_valores = pool.map(eval_func, poblacion)
-            
-            # Reconstruir la lista de tuplas (individuo, fitness)
-            fitness_poblacion = list(zip(poblacion, fitness_valores))
+            tareas = [(ind, datos_serie, PASOS_POR_DIA, NUM_SIMULACIONES) for ind in poblacion]
+            fitness_poblacion = list(executor.map(_evaluar_individuo_worker, tareas))
             
             fitness_poblacion.sort(key=lambda x: x[1], reverse=True)
             mejor_ind_gen, mejor_fit_gen = fitness_poblacion[0]
+            avg_fit_gen = np.mean([fit for _, fit in fitness_poblacion])
             
             if mejor_fit_gen > mejor_fitness_global:
                 mejor_fitness_global = mejor_fit_gen
                 mejor_individuo_global = list(mejor_ind_gen)
                 
-            print(f"Gen {generacion+1:02d}/{GENERACIONES:02d} | Mejor Fitness: {mejor_fit_gen:.4f} | Viento: {mejor_ind_gen[0]:.1f}km/h @ {mejor_ind_gen[1]:.1f}° | Humedad: {mejor_ind_gen[2]:.1f}% | Comb: {mejor_ind_gen[3]:.2f}")
+            historial_telemetria.append({
+                'generacion': generacion + 1,
+                'mejor_fitness': mejor_fit_gen,
+                'promedio_fitness': avg_fit_gen,
+                'viento_vel': mejor_ind_gen[0],
+                'viento_dir': mejor_ind_gen[1],
+                'humedad': mejor_ind_gen[2],
+                'combustible': mejor_ind_gen[3]
+            })
+            
+            print(f"Gen {generacion+1:02d}/{GENERACIONES:02d} | Mejor Fitness: {mejor_fit_gen:.4f} (Prom: {avg_fit_gen:.4f}) | Viento: {mejor_ind_gen[0]:.1f}km/h @ {mejor_ind_gen[1]:.1f}° | Humedad: {mejor_ind_gen[2]:.1f}% | Comb: {mejor_ind_gen[3]:.2f}")
             
             # Elitismo: Conservar los 2 mejores
             NUM_ELITES = 2
@@ -266,5 +346,16 @@ def ejecutar_algoritmo_genetico(entradas_matrices):
     print(f" -> Carga de Combustible: {mejor_individuo_global[3]:.2f}")
     print("="*60)
     
+    guardar_grafico_fitness(historial_telemetria)
+    guardar_csv_resultados(historial_telemetria, mejor_individuo_global, mejor_fitness_global)
+    
     return mejor_individuo_global
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) >= 3:
+        from ver_mapa_filtrado import procesar_rango_fechas
+        entradas = procesar_rango_fechas(sys.argv[1], sys.argv[2])
+        if entradas:
+            ejecutar_algoritmo_genetico(entradas)
 

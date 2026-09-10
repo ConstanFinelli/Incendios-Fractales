@@ -11,12 +11,20 @@ def _avanzar_pasos_AC(grilla, viento_vel, viento_dir, humedad, combustible, paso
     prob_base = combustible * (1.0 - humedad_norm)
     theta_viento = np.radians(viento_dir)
     c_viento = 0.05  # Constante de sensibilidad al viento
-    
     vecinos = [
         (-1, -1), (-1, 0), (-1, 1),
         ( 0, -1),          ( 0, 1),
         ( 1, -1), ( 1, 0), ( 1, 1)
     ]
+    
+    probs_vecinos = np.zeros(8)
+    for k, (dy, dx) in enumerate(vecinos):
+        theta_vecino = np.arctan2(-dy, dx)
+        alineacion = np.cos(theta_viento - theta_vecino)
+        factor_viento = np.exp(c_viento * viento_vel * alineacion)
+        probs_vecinos[k] = min(prob_base * factor_viento, 0.95)
+        
+    rand_func = np.random.random
     
     for _ in range(pasos_tiempo):
         # Localizar celdas que están ardiendo activamente
@@ -29,15 +37,10 @@ def _avanzar_pasos_AC(grilla, viento_vel, viento_dir, humedad, combustible, paso
         
         # Propagar a vecinos intactos
         for y, x in zip(y_ardiendo, x_ardiendo):
-            for dy, dx in vecinos:
+            for k, (dy, dx) in enumerate(vecinos):
                 ny, nx = y + dy, x + dx
                 if 0 <= ny < tamano and 0 <= nx < tamano and grilla[ny, nx] == 0:
-                    theta_vecino = np.arctan2(-dy, dx)
-                    alineacion = np.cos(theta_viento - theta_vecino)
-                    factor_viento = np.exp(c_viento * viento_vel * alineacion)
-                    prob_final = min(prob_base * factor_viento, 0.95)
-                    
-                    if np.random.rand() < prob_final:
+                    if rand_func() < probs_vecinos[k]:
                         grilla[ny, nx] = 1 
                         
     return grilla

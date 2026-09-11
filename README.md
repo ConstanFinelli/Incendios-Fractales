@@ -31,9 +31,9 @@ flowchart LR
 ```
 
 1. **Fase 1: Extracción y Filtrado Satelital (`ver_mapa_filtrado.py`):**
-   Filtra los focos en el área de Corrientes ($\text{Lat } [-30.8^\circ, -27.2^\circ], \text{Lon } [-59.8^\circ, -55.6^\circ]$), rasteriza a grilla de $256 \times 256$ celdas, aplica dilatación morfológica y limpia islas de ruido aisladas.
+   Filtra los focos en el área de Corrientes ($\text{Lat } [-30.8^\circ, -27.2^\circ], \text{Lon } [-59.8^\circ, -55.6^\circ]$), rasteriza a grilla de $256 \times 256$ celdas, aplica dilatación morfológica física calibrada (1 iteración, $r \approx 1.6\text{ km}$) y preserva integralmente el 100% de los focos multicluster observados por la NASA.
 2. **Fase 2: Optimización Inversa Multitemporal (`algoritmo_genetico.py`):**
-   Evoluciona una población de hipótesis climáticas en paralelo (`multiprocessing`), evaluando el fitness híbrido multitemporal ($0.4 \cdot \text{Fractal} + 0.6 \cdot \text{IoU}$) frente a la serie temporal de observaciones satelitales.
+   Evoluciona una población de hipótesis climáticas en paralelo (`ProcessPoolExecutor`), evaluando el fitness híbrido multitemporal ($50\%$ Dimensión Fractal directa $+ 50\%$ Cobertura Eficiente Espacial $F_1$-Dice) frente a la serie temporal de observaciones satelitales.
 3. **Fase 3: Simulación Predictiva Multi-Horizonte (`simulador_predictivo.py`):**
    A partir de la cicatriz satelital consolidada de partida ($M_{\text{base}}$), encadena la propagación continua en tres etapas ($M_{\text{base}} \xrightarrow{+30} M_{24\text{h}} \xrightarrow{+30} M_{48\text{h}} \xrightarrow{+30} M_{72\text{h}}$) y construye la matriz isócrona de riesgo acumulativa.
 4. **Fase 4: Transposición Cartográfica Territorial (`visualizador_corrientes.py`):**
@@ -98,11 +98,14 @@ Incendios-Fractales/
 ├── requirements.txt                 # Dependencias del ecosistema Python
 ├── docs/
 │   ├── DOCUMENTACION_COMPLETA_PROYECTO.md  # Manual exhaustivo y catálogo de funciones
+│   ├── Reestructuracion IoU.md             # Fundamentación teórica y experimental de F1-Dice
 │   ├── tasks.md                            # Hoja de ruta, tareas y trazabilidad de mejoras
+│   ├── non-implemented-plans/              # Planes de diseño para fases futuras (Spotting, BLX-α)
 │   └── files/                              # Especificación modular por componente
-└── output/                          # Mapas, matrices e imágenes generadas
-    ├── npy/                         # Matrices binarias satelitales (.npy)
-    └── siluetas/                    # Siluetas fractales limpias (.png)
+├── non-implemented-plans/                  # Réplica de planes de trabajo futuro
+└── output/                                 # Mapas, matrices e imágenes generadas
+    ├── npy/                                # Matrices binarias satelitales (.npy)
+    └── siluetas/                           # Siluetas fractales limpias (.png)
 ```
 
 ---

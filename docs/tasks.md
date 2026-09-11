@@ -153,7 +153,7 @@ El AG actual implementa un algoritmo genético canónico con codificación real,
   - *Fundamento:* Formular la optimización biobjetivo: $\max f_1 = \text{IoU}$, $\max f_2 = F_{\text{fractal}}$ utilizando **NSGA-II** mediante [`pymoo`](https://pymoo.org/) o [`deap`](https://deap.readthedocs.io/).
   - *Cómputo Adicional:* **Medio-Alto ($+30\% \text{ a } +50\%$ en tiempo de ordenamiento)**.
     - *Causa:* El algoritmo debe realizar el *Non-Dominated Sorting* $O(M \cdot N^2)$ y cálculo de *Crowding Distance* en cada generación.
-    - *Población sugerida:* Para un Frente de Pareto bien poblado se recomienda elevar de 20 a 50 individuos y de 40 a 60 generaciones.
+    - *Población sugerida:* Para un Frente de Pareto bien poblado se recomienda elevar de 32 a 50 individuos y de 40 a 60 generaciones.
     - *Tiempo estimado:* $\approx \mathbf{4 \text{ a } 8 \text{ minutos}}$ por corrida completa en CPU de 8 núcleos. RAM: $< 300 \text{ MB}$.
 
 - [ ] **T4.2: Operadores Genéticos Continuos (SBX y Mutación Polinomial)**
@@ -173,8 +173,8 @@ El AG actual implementa un algoritmo genético canónico con codificación real,
 
 | Tarea / Mejora | Estado | Tipo de Cómputo Principal | Tiempo Adicional ($\Delta t$) | RAM Adicional | Viabilidad en PC Local (Laptop 4-8 núcleos, 8-16 GB RAM) | ¿Requiere GPU / Cluster / Cloud? |
 |---|:---:|---|---|---|:---:|:---:|
-| **T1.1: Reducción Dilatación** | ✅ **Implementado** | CPU (Convolución 2D) | $-60\%$ (Más rápido) | $0 \text{ MB}$ |  Inmediata | No |
-| **T1.2: Filtrado Masa Crítica** | ✅ **Implementado** | CPU (Indexación NumPy) | $+1 \text{ ms}$ | $0 \text{ MB}$ |  Inmediata | No |
+| **T1.1: Dilatación Calibrada (1 iteración)** | ✅ **Implementado** | CPU (Convolución 2D) | $-70\%$ (Más rápido) | $0 \text{ MB}$ |  Inmediata | No |
+| **T1.2: Preservación Multi-Cluster** | ✅ **Implementado** | CPU (Indexación NumPy) | $0 \text{ ms}$ (Sin cortes) | $0 \text{ MB}$ |  Inmediata | No |
 | **T1.3: Alpha Shapes** | ⏳ *Pendiente* | CPU (Delaunay 2D) | $+1 \text{ s}$ (una vez) | $+30 \text{ MB}$ |  Inmediata | No |
 | **T1.4: Densidad KDE (FRP)** | ⏳ *Pendiente* | CPU (Evaluación Kernel) | $+3 \text{ s}$ (una vez) | $+80 \text{ MB}$ |  Inmediata | No |
 | **T1.5: Box-Counting Disperso** | ✅ **Implementado** | CPU (Reshape NumPy) | $-5\%$ (Más rápido) | $0 \text{ MB}$ |  Inmediata | No |
@@ -183,7 +183,7 @@ El AG actual implementa un algoritmo genético canónico con codificación real,
 | **T2.3: Topografía SRTM** | ⏳ *Pendiente* | CPU (Gradiente Sobel) | $+2 \text{ s}$ inicio | $+50 \text{ MB}$ |  Inmediata | No |
 | **T2.4: Viento Dinámico ERA5** | ⏳ *Pendiente* | CPU / I/O Disco | $+1 \text{ s}$ inicio | $+30 \text{ MB}$ |  Inmediata | No |
 | **T3.1: Out-of-Sample Test** | ⏳ *Pendiente* | CPU (Inferencia prospectiva) | $1 \text{ corrida} \approx 1 \text{ min}$ | $+20 \text{ MB}$ |  Muy viable | No |
-| **T3.2: Batería Métricas F1/IoU**| ⏳ *Pendiente* | CPU (Álgebra matricial) | $< 1 \text{ s}$ | $+10 \text{ MB}$ |  Inmediata | No |
+| **T3.2: Cobertura Eficiente F1-Dice**| ✅ **Implementado (AG)** | CPU (Álgebra matricial) | $< 1 \text{ ms}$ | $0 \text{ MB}$ |  Inmediata | No |
 | **T3.3: Estudio de Ablación (3x)**| ⏳ *Pendiente* | CPU Paralela (Multiprocessing)| $\approx 4 \text{ minutos}$ | $+150 \text{ MB}$ |  Muy viable | No |
 | **T3.4: Ground Truth Clima** | ⏳ *Pendiente* | CPU (Estadística SciPy) | $< 2 \text{ s}$ | $+20 \text{ MB}$ |  Inmediata | No |
 | **T4.1: Multiobjetivo NSGA-II** | ⏳ *Pendiente* | CPU (Sorting no dominado) | $\approx 6 \text{ a } 8 \text{ min}$ | $+250 \text{ MB}$ |  Muy viable | No |
@@ -237,18 +237,18 @@ flowchart TD
 
     subgraph Fase_Congreso ["2. Fase Mediano Plazo (Paper de Congreso: CACIC / JAIIO / Argencon)"]
         F2_1["Validación Out-of-Sample (Predecir día T+1 real)"]
-        F2_2["Estudio de Ablación (IoU solo vs Fractal solo vs Híbrido)"]
-        F2_3["Reducción de dilatación a radio físico (2-3 iteraciones)"]
+        F2_2["Estudio de Ablación (F1 solo vs Fractal solo vs Híbrido)"]
+        F2_3["Dilatación calibrada a 1 iteración (~1.6 km) ✅"]
         F2_4["Tabla cuantitativa de métricas (F1, IoU, Delta D)"]
         F2_5["Costo de cómputo estimado: ~5 a 15 minutos en PC local"]
     end
 
     subgraph Fase_Revista ["3. Fase Largo Plazo (Paper de Revista Internacional Q1/Q2)"]
-        F3_1["Capa de combustible real MapBiomas"]
-        F3_2["Mecanismo de saltación de pavesas (Spotting)"]
-        F3_3["Optimización Multiobjetivo NSGA-II (pymoo)"]
-        F3_4["Comparación contra ERA5-Land o estaciones INTA"]
-        F3_5["30 Réplicas estadísticas completas (~2.5 a 3.5 horas de cómputo)"]
+        F3_1["Capa de combustible real IGN WFS ✅ (T2.1)"]
+        F3_2["Mecanismo de saltación de pavesas (Spotting - T2.2)"]
+        F3_3["Optimización Multiobjetivo NSGA-II (pymoo - T4.1)"]
+        F3_4["Comparación contra ERA5-Land o estaciones INTA (T3.4)"]
+        F3_5["30 Réplicas estadísticas completas (~2.5 a 3.5 horas de cómputo - T4.3)"]
     end
 
     Fase_Inmediata --> Fase_Congreso --> Fase_Revista

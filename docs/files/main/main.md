@@ -42,7 +42,7 @@ El script proporciona una interfaz interactiva de línea de comandos (CLI) que g
 ### Salidas:
 - Orquesta la generación de todos los artefactos en la carpeta `output/`:
   - `output/npy/matriz_objetivo_limpia_{fecha}.npy`: Matrices binarias satelitales procesadas.
-  - `output/siluetas/silueta_fuego_limpia_{fecha}.png`: Siluetas fractales limpias por fecha.
+  - `output/siluetas/silueta_fractal_limpia_{fecha}.png`: Siluetas fractales limpias por fecha.
   - `output/curva_fitness.png`: Curva de convergencia evolutiva del algoritmo genético.
   - `output/historial_fitness.csv` y `output/resultados_optimizacion.csv`: Telemetría del AG.
   - `output/mapa_riesgo_predictivo.png`: Matriz isócrona multi-horizonte (24h, 48h, 72h).

@@ -26,7 +26,7 @@ Este archivo no reimplementa lógica satelital, evolutiva ni cartográfica, sino
 ### Provenientes de `ver_mapa_filtrado.py`:
 - **`procesar_rango_fechas(fecha_inicio, fecha_fin)`**:
   - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/ver_mapa_filtrado/functions.md`](../ver_mapa_filtrado/functions.md).
-  - *Rol en `main.py`:* Procesa secuencialmente cada día del intervalo satelital, filtrando la región geográfica de Corrientes, dilatando a radio físico ($2$ iteraciones) y conservando los clusters con masa crítica ($k \ge 3$).
+  - *Rol en `main.py`:* Procesa secuencialmente cada día del intervalo satelital, filtrando la región geográfica de Corrientes, dilatando a radio físico primario ($1$ iteración, $r \approx 1.6\text{ km}$) y preservando integralmente el 100% de los focos multicluster observados por la NASA.
 - **`procesar_fecha(fecha_elegida=None)`**:
   - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/ver_mapa_filtrado/functions.md`](../ver_mapa_filtrado/functions.md).
   - *Rol en `main.py`:* Procesa una única fecha cuando se requiere de forma aislada.

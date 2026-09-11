@@ -21,9 +21,9 @@ Este módulo constituye la **Fase 2** del proyecto. Conecta los datos satelitale
         ┌─────────────────────────────────────────────┐
         │        algoritmo_genetico.py                │
         │                                             │
-        │  • Población: cromosomas [V, θ, H, C]       │
+        │  • Población: 32 cromosomas [V, θ, H, C]     │
         │  • Evaluación multinúcleo en paralelo       │
-        │  • Monte Carlo (3 corridas por individuo)   │
+        │  • Monte Carlo (5 corridas por individuo)   │
         │  • Fitness híbrido (50% Fractal + 50% IoU)  │
         │  • Selección por torneo (k=3), Cruce, Mut   │
         │  • Elitismo (top 2 individuos conservados)  │
@@ -88,7 +88,7 @@ donde $w_{\text{fractal}} = 0.5$ y $w_{\text{IoU}} = 0.5$.
    Garantiza que el incendio se propague en la misma dirección y ubicación geográfica que el fenómeno real.
 
 ### Mitigación de Ruido Estocástico (Monte Carlo):
-Dado que el autómata celular es probabilístico, un individuo prometedor podría obtener un mal puntaje por una tirada aleatoria desfavorable. Para estabilizar el fitness, cada individuo se evalúa promediando los resultados de $N = 3$ simulaciones Monte Carlo independientes (`NUM_SIMULACIONES = 3`).
+Dado que el autómata celular es probabilístico, un individuo prometedor podría obtener un mal puntaje por una tirada aleatoria desfavorable. Para estabilizar el fitness, cada individuo se evalúa promediando los resultados de $N = 5$ simulaciones Monte Carlo independientes (`NUM_SIMULACIONES = 5`).
 
 ### Operadores Genéticos y Estrategia Evolutiva:
 - **Selección:** Torneo determinista de tamaño $k = 3$.

@@ -44,7 +44,7 @@
   - `individuo` (list): Vector de 4 genes `[viento_vel, viento_dir, humedad, combustible]`.
   - `datos_serie` (list): Lista devuelta por `cargar_datos_serie_temporal`.
   - `pasos_por_dia` (int, opcional): Ciclos por día (30).
-  - `num_simulaciones` (int, opcional): Réplicas Monte Carlo (3).
+  - `num_simulaciones` (int, opcional): Réplicas Monte Carlo (5).
   - `mapa_combustible` (np.ndarray, opcional): Matriz 2D $[0.0, 1.0]$ con la susceptibilidad de combustible de Corrientes (IGN WFS).
 - **Retorno:** `float` con el fitness promedio del individuo en el rango $[0.0, 1.0]$.
 
@@ -119,7 +119,7 @@
 <a id="ejecutar_algoritmo_genetico"></a>
 ### `ejecutar_algoritmo_genetico(entradas_matrices)`
 - **Firma:** `def ejecutar_algoritmo_genetico(entradas_matrices):`
-- **Descripción:** Función orquestadora de la Fase 2. Inicializa el pool de procesos con `ProcessPoolExecutor` aprovechando todos los núcleos CPU disponibles ($N-1$), inicializa la población aleatoria y ejecuta el bucle de $40$ generaciones. En cada generación evalúa en paralelo, aplica elitismo (top 2), realiza selección por torneo, cruce y mutación. Al concluir, exporta los reportes CSV y gráficos, retornando el mejor vector climático hallado.
+- **Descripción:** Función orquestadora de la Fase 2. Inicializa el pool de procesos con `ProcessPoolExecutor` aprovechando todos los núcleos CPU disponibles ($N-1$), inicializa la población aleatoria de 32 individuos y ejecuta el bucle de $40$ generaciones. En cada generación evalúa en paralelo con 5 corridas Monte Carlo por individuo, aplica elitismo (top 2), realiza selección por torneo, cruce y mutación. Al concluir, exporta los reportes CSV y gráficos, retornando el mejor vector climático hallado.
 - **Parámetros:**
   - `entradas_matrices`: Matriz única o serie multitemporal.
 - **Retorno:** `list` con las 4 variables óptimas `[viento_vel, viento_dir, humedad, combustible]`, o `None` en caso de fallo.

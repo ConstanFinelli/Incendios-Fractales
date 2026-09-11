@@ -10,11 +10,11 @@ from calcular_dimension_fractal import extraer_perimetro, calcular_box_counting,
 # ==============================================================================
 # CONFIGURACIÓN DEL ALGORITMO GENÉTICO
 # ==============================================================================
-TAMANO_POBLACION = 20        # Cantidad de hipótesis climáticas por generación
+TAMANO_POBLACION = 32        # Cantidad de hipótesis climáticas por generación
 GENERACIONES = 40             # Número de iteraciones evolutivas
 PROB_MUTACION = 0.2          # Probabilidad de mutar un gen
 PASOS_POR_DIA = 30         # CONSTANTE: Pasos de simulación del AC por día calendario (fácil de modificar)
-NUM_SIMULACIONES = 3         # Cantidad de corridas Monte Carlo por individuo para mitigar ruido
+NUM_SIMULACIONES = 5         # Cantidad de corridas Monte Carlo por individuo para mitigar ruido
 
 # PONDERACIÓN DE LA FUNCIÓN DE APTITUD (FITNESS HÍBRIDO)
 PESO_FRACTAL = 0.5           # Peso asignado a la Dimensión Fractal del perímetro/frente activo

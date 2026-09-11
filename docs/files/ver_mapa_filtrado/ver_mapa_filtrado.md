@@ -45,10 +45,10 @@ Este módulo es el pilar de la **Fase 1** (Preprocesamiento Satelital):
 - **Parámetros temporales:** Fecha única o intervalo de fechas `[fecha_inicio, fecha_fin]`.
 
 ### Salidas (generadas en `output/`):
-- `matriz_fractal_recorte_<fecha>.npy`: Matriz cruda $256 \times 256$ de puntos de calor detectados.
-- `matriz_fractal_recorte_continua_<fecha>.npy`: Matriz tras 2 ciclos de dilatación morfológica física (~3.1 km).
-- `matriz_objetivo_limpia_<fecha>.npy`: Matriz multicluster con frentes de fuego activos filtrados por masa crítica (ruido aislado de 1-2 celdas eliminado).
-- `silueta_fractal_limpia_<fecha>.png`: Renderizado monocromático de alta resolución a 300 DPI con `origin='lower'`.
+- `output/npy/matriz_fractal_recorte_<fecha>.npy`: Matriz cruda $256 \times 256$ de puntos de calor detectados.
+- `output/npy/matriz_fractal_recorte_continua_<fecha>.npy`: Matriz tras 2 ciclos de dilatación morfológica física (~3.1 km).
+- `output/npy/matriz_objetivo_limpia_<fecha>.npy`: Matriz multicluster con frentes de fuego activos filtrados por masa crítica (ruido aislado de 1-2 celdas eliminado).
+- `output/siluetas/silueta_fractal_limpia_<fecha>.png`: Renderizado monocromático de alta resolución a 300 DPI con `origin='lower'`.
 
 ---
 

@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import binary_erosion
+import os
 
 def extraer_perimetro(matriz_binaria):
     """
@@ -77,8 +78,11 @@ if __name__ == "__main__":
     #nombre_archivo = f'matriz_simulada_prueba.npy' #para probar con matriz de automata
     
     try:
-        print(f"Cargando {nombre_archivo}...")
-        matriz_limpia = np.load('output/' + nombre_archivo)
+        ruta_archivo = os.path.join('output', 'npy', nombre_archivo)
+        if not os.path.exists(ruta_archivo):
+            ruta_archivo = os.path.join('output', nombre_archivo)
+        print(f"Cargando {ruta_archivo}...")
+        matriz_limpia = np.load(ruta_archivo)
         
         # 2. Extraer el perímetro
         perimetro = extraer_perimetro(matriz_limpia)
@@ -107,9 +111,10 @@ if __name__ == "__main__":
         ax2.legend()
         ax2.grid(True, linestyle='--', alpha=0.6)
         
-        plt.tight_layout()
-        plt.savefig(f'reporte_fractal_{fecha_elegida}.png', dpi=300)
-        print(f"Gráfico guardado como 'reporte_fractal_{fecha_elegida}.png'")
+        os.makedirs('output', exist_ok=True)
+        ruta_salida = os.path.join('output', f'reporte_fractal_{fecha_elegida}.png')
+        plt.savefig(ruta_salida, dpi=300)
+        print(f"Gráfico guardado como '{ruta_salida}'")
         plt.show()
 
     except FileNotFoundError:

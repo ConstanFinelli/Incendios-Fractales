@@ -1,6 +1,7 @@
 import sys
 import os
 import numpy as np
+from datetime import datetime, timedelta
 from ver_mapa_filtrado import procesar_rango_fechas, procesar_fecha
 from algoritmo_genetico import ejecutar_algoritmo_genetico, PASOS_POR_DIA
 from simulador_predictivo import ejecutar_prediccion
@@ -19,9 +20,14 @@ def main():
         print("Error: Debe ingresar al menos una fecha inicial. Saliendo...")
         sys.exit(1)
         
-    fecha_fin = input("Fecha Final (opcional, presione Enter para analizar solo Fecha Inicial): ").strip()
-    if not fecha_fin:
-        fecha_fin = fecha_inicio
+    fecha_fin = input("Fecha Final (opcional, presione Enter para calibrar hacia el día siguiente): ").strip()
+    if not fecha_fin or fecha_fin == fecha_inicio:
+        try:
+            dt_inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d")
+            fecha_fin = (dt_inicio + timedelta(days=1)).strftime("%Y-%m-%d")
+            print(f" -> Configurado avance temporal continuo: {fecha_inicio} (T0 partida) -> {fecha_fin} (T1 objetivo)")
+        except ValueError:
+            fecha_fin = fecha_inicio
         
     print(f"\n[FASE 1] Extracción y rasterización satelital ({fecha_inicio} -> {fecha_fin})...")
     
@@ -54,8 +60,8 @@ def main():
     print("  📊 output/mapa_riesgo_predictivo.png       (Matriz isócrona multi-horizonte 24h, 48h, 72h)")
     print("  📍 output/mapa_corrientes_prediccion.png   (Mapa GIS 4 paneles de Corrientes @ 300 DPI)")
     print("  🌐 output/mapa_corrientes_interactivo.html  (Mapa Web interactivo multicapa de Corrientes)")
-    print("  🇦🇷 output/mapa_argentina_prediccion.png    (Mapa GIS 4 paneles nacional de Argentina @ 300 DPI)")
-    print("  🌐 output/mapa_argentina_interactivo.html   (Mapa Web interactivo multicapa de Argentina)")
+    print("  💾 output/npy/                             (Matrices binarias satelitales .npy)")
+    print("  🖼️ output/siluetas/                        (Siluetas fractales procesadas .png)")
     print("="*65)
 
 

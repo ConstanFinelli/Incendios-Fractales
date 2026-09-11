@@ -6,7 +6,7 @@
 - **+48 Horas (+60 ciclos | Nivel Preventivo):** Alerta temprana a poblaciones rurales, preparación de evacuaciones y diseño de cortafuegos mecanizados pesados.
 - **+72 Horas (+90 ciclos | Nivel Estratégico):** Declaración de emergencias provinciales/nacionales, gestión de recursos aéreos y protección de reservas ecológicas críticas (como los Esteros del Iberá).
 
-Asimismo, construye la **matriz de riesgo isócrono acumulativo** y coordina la transposición espacial hacia los visualizadores GIS provinciales y nacionales.
+Asimismo, construye la **matriz de riesgo isócrono acumulativo** y coordina la transposición espacial hacia el visualizador GIS provincial de Corrientes.
 
 ---
 
@@ -15,7 +15,7 @@ Este módulo materializa la **Fase 3** (Predicción y Cartografía). Une los res
 - Utiliza las capacidades de simulación continua de `automata_celular.py`.
 - Parte de la última observación satelital válida ($T_{\text{final}}$) como foco activo de ignición.
 - Genera la matriz de riesgo isócrono y la figura multipanel matricial `output/mapa_riesgo_predictivo.png`.
-- Delega la proyección geográfica georreferenciada a `visualizador_corrientes.py` y `visualizador_argentina.py`.
+- Delega la proyección geográfica georreferenciada a `visualizador_corrientes.py`.
 
 ```
     [Variables Inversas Calibradas del AG] + [Último Día Observado]
@@ -30,12 +30,12 @@ Este módulo materializa la **Fase 3** (Predicción y Cartografía). Une los res
                │                             │
                └──────────────┬──────────────┘
                               │
-       ┌──────────────────────┼──────────────────────┐
-       ▼                      ▼                      ▼
-[Matriz Isócrona PNG] [Mapas Corrientes]     [Mapas Argentina]
- mapa_riesgo_predictivo   • PNG 4 paneles        • PNG 4 paneles
-                         • HTML interactivo     • HTML interactivo
-                         • Ranking Departamental
+       ┌──────────────────────┴──────────────────────┐
+       ▼                                             ▼
+[Matriz Isócrona PNG]                        [Mapas Corrientes]
+ mapa_riesgo_predictivo                       • PNG 4 paneles
+                                              • HTML interactivo
+                                              • Ranking Departamental
 ```
 
 ---
@@ -61,7 +61,6 @@ Este módulo materializa la **Fase 3** (Predicción y Cartografía). Une los res
 - **Módulos del proyecto:**
   - `automata_celular` (`simular_evolucion_multietapa`)
   - `visualizador_corrientes` (`generar_mapas_corrientes`)
-  - `visualizador_argentina` (`generar_mapas_argentina`)
 
 ---
 

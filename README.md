@@ -25,7 +25,7 @@ flowchart LR
     A["🛰️ Datos NASA FIRMS"] --> B["FASE 1\nRasterización Satelital\n(ver_mapa_filtrado.py)"]
     B --> C["FASE 2\nAlgoritmo Genético\n(algoritmo_genetico.py)"]
     C --> D["FASE 3\nSimulación Multi-Horizonte\n(simulador_predictivo.py)"]
-    D --> E["FASE 4\nTransposición Cartográfica\n(visualizador_corrientes.py\nvisualizador_argentina.py)"]
+    D --> E["FASE 4\nTransposición Cartográfica\n(visualizador_corrientes.py)"]
     E --> F["📍 Mapas GIS 4 Paneles (.png)"]
     E --> G["🌐 Mapas Web Folium (.html)"]
 ```
@@ -36,8 +36,8 @@ flowchart LR
    Evoluciona una población de hipótesis climáticas en paralelo (`multiprocessing`), evaluando el fitness híbrido multitemporal ($0.4 \cdot \text{Fractal} + 0.6 \cdot \text{IoU}$) frente a la serie temporal de observaciones satelitales.
 3. **Fase 3: Simulación Predictiva Multi-Horizonte (`simulador_predictivo.py`):**
    A partir de la cicatriz satelital consolidada de partida ($M_{\text{base}}$), encadena la propagación continua en tres etapas ($M_{\text{base}} \xrightarrow{+30} M_{24\text{h}} \xrightarrow{+30} M_{48\text{h}} \xrightarrow{+30} M_{72\text{h}}$) y construye la matriz isócrona de riesgo acumulativa.
-4. **Fase 4: Transposición Cartográfica Territorial (`visualizador_corrientes.py` y `visualizador_argentina.py`):**
-   Georreferencia los tres horizontes sobre los 25 departamentos de Corrientes y sobre el territorio de la República Argentina (24 provincias completas), genera mapas estáticos GIS de 4 paneles a 300 DPI, construye visores web interactivos en Folium con capas conmutables y reporta el ranking de departamentos en riesgo por horizonte.
+4. **Fase 4: Transposición Cartográfica Territorial (`visualizador_corrientes.py`):**
+   Georreferencia los tres horizontes sobre los 25 departamentos de la Provincia de Corrientes, genera mapas estáticos GIS de 4 paneles a 300 DPI, construye visores web interactivos en Folium con capas conmutables y reporta el ranking de departamentos en riesgo por horizonte.
 
 ---
 
@@ -70,16 +70,15 @@ python main.py
 
 El programa te solicitará las fechas a analizar:
 - **Fecha Inicial:** `2022-02-17` (o cualquier fecha pico del desastre, ej. `2022-02-18`).
-- **Fecha Final:** `2022-02-19` (opcional; presiona Enter para analizar solo el día inicial).
+- **Fecha Final:** `2022-02-19` (opcional; presiona Enter para calibrar automáticamente hacia el día siguiente).
 
 ### 📁 Salidas Generadas (en `output/`)
 
 - 📊 **`output/mapa_riesgo_predictivo.png`**: Matriz comparativa de riesgo isócrono del autómata celular (4 paneles en alta resolución a 300 DPI: Foco Base Observado, Predicción +24h Táctica, Predicción +48h Preventiva y Predicción +72h Estratégica con escala isócrona acumulativa).
 - 📍 **`output/mapa_corrientes_prediccion.png`**: Figura cartográfica GIS (300 DPI) estructurada en 4 paneles horizontales georreferenciados sobre los 25 departamentos de Corrientes, con rótulos de texto protegidos por halo blanco (`path_effects`).
 - 🌐 **`output/mapa_corrientes_interactivo.html`**: Mapa web interactivo de Corrientes desarrollado en Folium con teselas conmutables (**CartoDB Positron**, **OpenStreetMap**, **Satélite Esri World Imagery**), tooltips por departamento y capas conmutables autónomas en Base64 para cada horizonte temporal (+24h, +48h, +72h e Isócronas).
-- 🇦🇷 **`output/mapa_argentina_prediccion.png`**: Figura cartográfica GIS (300 DPI) con 4 paneles horizontales análogos a Corrientes sobre el mapa completo de la República Argentina (24 provincias), manteniendo la misma vista nacional sin distorsiones de escala.
-- 🌐 **`output/mapa_argentina_interactivo.html`**: Mapa web interactivo en Folium de la República Argentina con división provincial oficial, capas satelitales, minimapa y leyenda climatológica flotante.
-- 💾 **`output/matriz_objetivo_limpia_AAAA-MM-DD.npy`**: Matrices binarias satelitales filtradas de la NASA (VIIRS/MODIS).
+- 💾 **`output/npy/matriz_objetivo_limpia_AAAA-MM-DD.npy`**: Subcarpeta de matrices binarias satelitales filtradas de la NASA (VIIRS/MODIS).
+- 🖼️ **`output/siluetas/silueta_fractal_limpia_AAAA-MM-DD.png`**: Subcarpeta de siluetas fractales procesadas.
 
 ---
 
@@ -94,12 +93,14 @@ Incendios-Fractales/
 ├── automata_celular.py              # Motor físico de simulación de incendios
 ├── simulador_predictivo.py          # Proyección de riesgo preventivo (Fase 3)
 ├── visualizador_corrientes.py       # Cartografía departamental de Corrientes (Fase 4)
-├── visualizador_argentina.py        # Cartografía nacional y regional de Argentina (Fase 4)
 ├── requirements.txt                 # Dependencias del ecosistema Python
 ├── docs/
 │   ├── DOCUMENTACION_COMPLETA_PROYECTO.md  # Manual exhaustivo y catálogo de funciones
-│   └── conclusion_validacion_modelo.md     # Validación científica y contrastación física
+│   ├── tasks.md                            # Hoja de ruta, tareas y trazabilidad de mejoras
+│   └── files/                              # Especificación modular por componente
 └── output/                          # Mapas, matrices e imágenes generadas
+    ├── npy/                         # Matrices binarias satelitales (.npy)
+    └── siluetas/                    # Siluetas fractales limpias (.png)
 ```
 
 ---

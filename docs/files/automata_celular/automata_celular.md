@@ -79,3 +79,14 @@ $$P_{\text{ignición}} = \min(P_{\text{base}} \cdot f_{\text{viento}}, 0.95)$$
 ### Optimización por Localización de Celdas Activas:
 En lugar de recorrer las $256 \times 256 = 65,536$ celdas en cada ciclo temporal, el algoritmo utiliza `np.where(grilla == 1)` para indexar **únicamente las celdas activas**. Las celdas activas pasan automáticamente al estado 2 (cenizas), y solo sus vecinos intactos inmediatos son evaluados contra números pseudoaleatorios uniformes $U(0, 1)$. Esto reduce el tiempo computacional de la simulación en más de un $92\%$.
 
+### Definición Formal del Paso de Simulación ($\Delta t$):
+Un **paso de simulación** es la unidad atómica de integración temporal del Autómata Celular:
+1. **Calibración Temporal:** Con `PASOS_POR_DIA = 30`, cada paso equivale a:
+   $$\Delta t = \frac{24\text{ horas}}{30\text{ pasos}} = 0.8\text{ horas} = 48\text{ minutos}$$
+2. **Escala Espacial:** Con una resolución de celda de $\approx 1.57\text{ km}$, el avance de una celda por paso implica una velocidad máxima del frente de combustión de $\approx 1.96\text{ km/h}$.
+3. **Transición en 1 Paso ($t \to t+1$):**
+   - El frente activo actual ($t$) se extingue localmente a cenizas incombustibles (Estado 2).
+   - El frente intenta contagiar estocásticamente a los vecinos intactos (Estado 0) mediante la probabilidad anisótropa del viento $P_{\text{ignición}}$.
+   - Los vecinos exitosamente encendidos constituyen el nuevo frente activo para el paso $t+1$.
+
+

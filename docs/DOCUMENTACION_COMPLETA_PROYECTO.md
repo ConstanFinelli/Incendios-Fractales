@@ -50,17 +50,12 @@ flowchart TD
         I --> J["Mapa de Riesgo Predictivo Multipanel (.png)"]
     end
 
-    subgraph FASE 4: Transposición Cartográfica Territorial
+    subgraph FASE 4: Transposición Cartográfica Territorial (Corrientes)
         I --> K["visualizador_corrientes.py\n(Georreferenciación Departamental)"]
         L["GeoJSON 25 Departamentos de Corrientes"] --> K
         K --> M["Mapa GIS Estático de Corrientes\noutput/mapa_corrientes_prediccion.png"]
         K --> N["Mapa Web Interactivo Folium Corrientes\noutput/mapa_corrientes_interactivo.html"]
         K --> O["Ranking de Departamentos Afectados"]
-
-        I --> P["visualizador_argentina.py\n(Contexto Nacional y Regional)"]
-        Q["GeoJSON 24 Provincias de Argentina"] --> P
-        P --> R["Mapa GIS Estático de Argentina\noutput/mapa_argentina_prediccion.png"]
-        P --> S["Mapa Web Interactivo Folium Argentina\noutput/mapa_argentina_interactivo.html"]
     end
 ```
 
@@ -130,6 +125,26 @@ El simulador implementa 3 estados físicos:
 3. **Continuidad multitemporal día a día:** Lo que se quemó el Día 1 pasa a ser ceniza inerte el Día 2; el fuego del Día 2 solo avanza sobre la vegetación verde que aún rodea el perímetro.
 4. **Medición Fractal:** El área total afectada ($1+2$) permite extraer el perímetro exterior exacto de la cicatriz satelital mediante Box-Counting.
 
+#### 3.5.1. Definición Formal del Paso de Simulación ($\Delta t$ y Discretización Espacio-Temporal)
+
+Un **paso de simulación** (o iteración de reloj del Autómata Celular) es la unidad discreta fundamental de avance temporal y dinámico del frente de fuego en el modelo. Se define formalmente bajo tres dimensiones interconectadas:
+
+1. **Equivalencia Temporal ($\Delta t$):**
+   El sistema calibra la escala diaria mediante la constante `PASOS_POR_DIA = 30`. Por lo tanto, cada paso discreto representa exactamente:
+   $$\Delta t = \frac{24\text{ horas}}{30\text{ pasos}} = 0.8\text{ horas} = 48\text{ minutos}$$
+   Esto significa que cada ciclo de reloj del simulador modela la propagación acumulada del fuego a lo largo de un período de 48 minutos de tiempo físico real.
+
+2. **Equivalencia Espacial y Velocidad Teórica del Frente:**
+   Dado que la grilla de $256 \times 256$ sobre la provincia de Corrientes posee una resolución de celda de $\Delta x \approx 1.57\text{ km}$, el salto de ignición hacia una celda contigua de la vecindad de Moore en un único paso de simulación representa una tasa máxima de propagación lineal de:
+   $$v_{\text{frente}} \approx \frac{1.57\text{ km}}{0.8\text{ h}} \approx 1.96\text{ km/h}$$
+   Esta tasa es plenamente consistente con la velocidad observada de avance de frentes de fuego en pajonales, pastizales secos y malezales bajo vientos moderados a fuertes (15 a 40 km/h).
+
+3. **Ciclo de Vida Algorítmico en 1 Paso ($t \to t + 1$):**
+   En cada paso de simulación ocurren secuencialmente tres procesos estocásticos atómicos:
+   - **Identificación del Frente Activo:** Mediante indexación vectorial (`np.where(grilla == 1)`), se localizan las celdas en combustión activa en el instante $t$.
+   - **Consunción a Cenizas:** Dichas celdas activas consumen íntegramente su biomasa disponible y pasan de manera irreversible a cenizas inertes (`grilla = 2`), garantizando que no puedan volver a quemarse.
+   - **Contagio Estocástico Anisótropo:** Cada celda que estuvo activa intenta propagar el fuego a sus 8 vecinos circundantes en Estado 0 (intactos). Para cada dirección espacial $(\Delta y, \Delta x)$, se calcula la probabilidad compuesta $P_{\text{ignición}} = \min(P_{\text{base}} \cdot f_{\text{viento}}, 0.95)$. Si una variable aleatoria uniforme $U(0, 1) < P_{\text{ignición}}$, la celda vecina se enciende pasando a Estado 1 para el paso $t+1$.
+
 ---
 
 ### 3.6. Delimitación Territorial, Georreferenciación y Resolución Espacial de Corrientes
@@ -186,29 +201,29 @@ El desarrollo del visualizador cartográfico y la integración del pipeline invo
    - Para que la investigación tenga impacto práctico inmediato en la toma de decisiones, la función `identificar_departamentos_afectados` realiza una unión espacial (`gpd.sjoin`) entre cada celda activa del frente simulado y los polígonos departamentales, generando en consola un ranking de departamentos bajo amenaza con porcentaje de afectación.
 
 5. **Decisión 5: Repositorio Ultraliviano y Carga Perezosa en `.gitignore`:**
-   - Archivos vectoriales voluminosos (`departamentos_corrientes.json`, $\sim 855\text{ KB}$; `provincias_argentina.json`, $\sim 555\text{ KB}$) y matrices intermedias binarias (`.npy`) están excluidos de Git. Tanto `visualizador_corrientes.py` como `visualizador_argentina.py` descargan, optimizan y almacenan en caché local de forma transparente los recursos faltantes mediante mecanismos de resiliencia ante errores de red.
+   - Archivos vectoriales voluminosos (`departamentos_corrientes.json`, $\sim 855\text{ KB}$) y matrices intermedias binarias (`.npy`) están excluidos de Git. `visualizador_corrientes.py` descarga, optimiza y almacena en caché local de forma transparente los recursos faltantes mediante mecanismos de resiliencia ante errores de red.
 
-6. **Decisión 6: Visualización Cartográfica Nacional y Provincial Homogénea en 4 Paneles Multi-Horizonte:**
-   - Tanto `visualizador_corrientes.py` como `visualizador_argentina.py` estructuran su salida estática en **cuatro paneles complementarios de alta resolución (300 DPI)**, compartiendo idéntica escala y encuadre geográfico sin distorsión de enfoque:
+6. **Decisión 6: Visualización Cartográfica Provincial en 4 Paneles Multi-Horizonte (Corrientes @ 300 DPI):**
+   - `visualizador_corrientes.py` estructura su salida estática en **cuatro paneles complementarios de alta resolución (300 DPI)** georreferenciados sobre los 25 departamentos de la provincia de Corrientes:
      - **Panel 1 (Foco Base Observado en $T_{\text{final}}$):** Muestra el foco satelital base consolidado al final del período de observación (azul noche `#2c3e50`), sin rojo de predicción, permitiendo visualizar la cicatriz real de partida.
      - **Panel 2 (Predicción Táctica a $+24\text{ Horas}$ / +30 ciclos):** Frente de avance táctico en ámbar (`#f39c12`) para cuadrillas y brigadistas en terreno.
      - **Panel 3 (Predicción Preventiva a $+48\text{ Horas}$ / +60 ciclos):** Expansión preventiva en naranja (`#e67e22`) para evacuación y maquinaria pesada.
      - **Panel 4 (Predicción Estratégica a $+72\text{ Horas}$ e Isócronas / +90 ciclos):** Expansión estratégica en rojo (`#e74c3c`) e isócronas sobre divisiones político-administrativas.
-   - De este modo, el usuario obtiene exactamente los mismos cuatro productos analíticos tanto a escala provincial como de todo el país, sin sesgos de zoom ni cambios de perspectiva entre paneles.
 
-7. **Decisión 7: Optimización y Disolución Topológica del GeoJSON Nacional:**
-   - El archivo vectorial oficial de departamentos de toda la Argentina (`departamentos-argentina.json`) supera los $13.7\text{ MB}$, lo cual provocaría una severa degradación en el tiempo de apertura y renderizado web en Folium y Matplotlib.
-   - La función `cargar_geometria_argentina()` descarga la geometría, agrupa y disuelve los polígonos por provincia (`dissolve(by='provincia')`), y aplica una simplificación topológica controlada (`geometry.simplify(tolerance=0.01, preserve_topology=True)`). Esto reduce el tamaño a tan solo $555\text{ KB}$ (una reducción del $96\%$), cargando en menos de $0.04\text{ s}$.
+7. **Decisión 7: Enfoque Territorial Exclusivo en la Provincia de Corrientes:**
+   - Para maximizar la fidelidad eco-física del modelo, el sistema delimita estrictamente su alcance geográfico a la provincia de Corrientes ($88.886\text{ km}^2$), descartando proyecciones a nivel nacional que diluían la resolución por píxel. La grilla $256 \times 256$ concentra toda su potencia en el macrosistema Iberá ($\approx 1.57\text{ km/píxel}$), permitiendo un análisis departamental de alta precisión para Defensa Civil provincial.
 
-8. **Decisión 8: Rotulación Provincial Vectorial con Halo Blanco Protector (`path_effects`):**
-   - Para que los nombres de las provincias se lean con máxima nitidez sin importar si se superponen con líneas de grilla o con los polígonos de las provincias vecinas, se implementó rotulación por centroides con efecto halo blanco (`pe.withStroke(linewidth=2.0, foreground='white')`), destacando a Corrientes con estrella y tipografía diferenciada.
+8. **Decisión 8: Estructura Limpia de Almacenamiento en `output/` (`npy/` y `siluetas/`):**
+   - Para evitar la polución de la carpeta raíz `output/` con decenas de matrices intermedias, los productos generados se organizan de forma limpia:
+     - `output/npy/`: Almacena todas las matrices binarias y continuas (`matriz_objetivo_limpia_*.npy`, `matriz_fractal_recorte_*.npy`).
+     - `output/siluetas/`: Almacena las figuras PNG de las siluetas fractales limpias (`silueta_fractal_limpia_*.png`).
+     - `output/`: Reserva el nivel superior exclusivamente para los productos finales de alto valor (mapas de riesgo predictivo, mapas GIS y visores interactivos de Corrientes, curvas de fitness y reportes CSV).
 
-9. **Decisión 9: Inicialización del Frente Predictivo en la Línea de Fuego Activa Final (`matriz_final = np.load(ruta_final)`):**
-   - Para proyectar la propagación futura (+24h, +48h, +72h), encender indiscriminadamente toda la huella histórica acumulada del incendio (ej. 30 días acumulados en una sola máscara) produciría un frente de ignición artificialmente masivo, detonando una explosión irreal de celdas en las primeras 24 horas (*flashover numérico* no físico).
-   - En su lugar, el simulador predictivo toma como ignición inicial exclusivamente la matriz satelital del último día observado (`matriz_final = np.load(ruta_final)`), que representa la línea de fuego activa real en tiempo presente. El área acumulada consumida con anterioridad permanece registrada como terreno quemado ($0$ combustible activo disponible), logrando que la expansión entre +24h, +48h y +72h sea uniforme, continua y coherente con las tasas reales de propagación observadas en campo.
+9. **Decisión 9: Punto de Partida de Expansión en las Celdas de Calor del Día Inicial ($T_0$):**
+   - El autómata celular y el algoritmo genético toman invariablemente como estado inicial (`grilla_inicial`) la matriz binaria real de celdas activas observadas en el día de inicio $T_0$. A partir de estos focos reales, el autómata propaga el fuego paso a paso buscando reproducir la geometría observada en los días sucesivos ($T_1, \dots, T_k$), erradicando la antigua inicialización en un único punto baricéntrico arbitrario.
 
 10. **Decisión 10: Centralización del Pipeline Satelital y Deprecación de Scripts Redundantes:**
-    - Se eliminó el script prototipo preliminar `ver_mapa_incendio.py`, consolidando todo el preprocesamiento de la base de datos de anomalías térmicas de la NASA (lectura GeoDataFrame, recorte espacial de Corrientes, rasterización binaria a $256 \times 256$, dilatación morfológica, filtrado de componentes conexos y exportación de matrices `.npy`) en un único módulo robusto, parametrizable y de alto rendimiento: `ver_mapa_filtrado.py`.
+    - Se consolidó todo el preprocesamiento de la base de datos de anomalías térmicas de la NASA (lectura GeoDataFrame, recorte espacial de Corrientes, rasterización binaria a $256 \times 256$, dilatación morfológica, filtrado de componentes conexos y exportación de matrices `.npy`) en un único módulo robusto, parametrizable y de alto rendimiento: `ver_mapa_filtrado.py`.
 
 11. **Decisión 11: Dilatación Física Convectiva, Filtrado Multi-Cluster y Box-Counting Directo:**
     - **Dilatación Física Realista (2 iteraciones, $r \approx 3.1\text{ km}$):** Se redujo la dilatación morfológica de 11 iteraciones ($\sim 17\text{ km}$) a 2 iteraciones, modelando con rigor el alcance convectivo de briznas incandescentes (*spotting*) y compensando el radio de muestreo del píxel VIIRS 375m sin distorsionar la geometría real.
@@ -258,7 +273,7 @@ Cada módulo dispone de dos documentos especializados:
 1. **`<modulo>.md`:** Explica la fundamentación teórica, decisiones de diseño, flujo de datos, librerías involucradas y arquitectura del archivo.
 2. **`functions.md`:** Catálogo técnico exhaustivo con la firma completa de cada función o bloque de ejecución, parámetros de entrada, valores de retorno, efectos secundarios y casos de uso.
 
-A continuación se indexan los 9 componentes del sistema:
+A continuación se indexan los 8 componentes del sistema:
 
 | Módulo | Código Fuente | Documento de Arquitectura | Catálogo de Funciones | Responsabilidad Principal |
 | :--- | :--- | :--- | :--- | :--- |
@@ -268,7 +283,6 @@ A continuación se indexan los 9 componentes del sistema:
 | **`algoritmo_genetico`** | [`algoritmo_genetico.py`](../algoritmo_genetico.py) | [Optimización Inversa](files/algoritmo_genetico/algoritmo_genetico.md) | [Funciones Genéticas](files/algoritmo_genetico/functions.md) | Algoritmo bioinspirado multiobjetivo (Fitness híbrido $0.5\,\text{Fractal} + 0.5\,\text{IoU}$), operadores genéticos y paralelismo multi-core. |
 | **`simulador_predictivo`** | [`simulador_predictivo.py`](../simulador_predictivo.py) | [Orquestación Predictiva](files/simulador_predictivo/simulador_predictivo.md) | [Funciones Predictivas](files/simulador_predictivo/functions.md) | Proyección preventiva multi-horizonte (+24h, +48h, +72h), codificación de riesgo isócrono y generación de figuras analíticas. |
 | **`visualizador_corrientes`** | [`visualizador_corrientes.py`](../visualizador_corrientes.py) | [Motor GIS Corrientes](files/visualizador_corrientes/visualizador_corrientes.md) | [Funciones Cartográficas](files/visualizador_corrientes/functions.md) | Cartografía departamental, uniones espaciales (`sjoin`), Data URIs Base64, mapas estáticos multipanel (300 DPI) y visor Folium. |
-| **`visualizador_argentina`** | [`visualizador_argentina.py`](../visualizador_argentina.py) | [Motor GIS Nacional](files/visualizador_argentina/visualizador_argentina.md) | [Funciones Nacionales](files/visualizador_argentina/functions.md) | Contexto nacional/regional, simplificación topológica vectorial provincial, mapas estáticos y visor interactivo Folium de Argentina. |
 | **`procesar_incendio`** | [`procesar_incendio.py`](../procesar_incendio.py) | [Auditoría Satelital](files/procesar_incendio/procesar_incendio.md) | [Bloques de Ejecución](files/procesar_incendio/functions.md) | Script procedural de análisis preliminar VIIRS, detección del día pico del desastre y exportación tabular CSV. |
 | **`main`** | [`main.py`](../main.py) | [Pipeline del Sistema](files/main/main.md) | [Función Main](files/main/functions.md) | Entrypoint interactivo CLI, validación de fechas de usuario y orquestación integral de las cuatro fases del sistema. |
 
@@ -309,13 +323,8 @@ La siguiente tabla resume todas las funciones y componentes de procesamiento del
 | 27 | [`generar_mapa_estatico_corrientes`](files/visualizador_corrientes/functions.md#generar_mapa_estatico_corrientes) | [`visualizador_corrientes.py`](files/visualizador_corrientes/visualizador_corrientes.md) | `m_ini, m_fut, m_riesgo, fechas, clima, pasos, ...` | `str` (ruta PNG 4 paneles) | `visualizador_corrientes.py` |
 | 28 | [`generar_mapa_interactivo_corrientes`](files/visualizador_corrientes/functions.md#generar_mapa_interactivo_corrientes) | [`visualizador_corrientes.py`](files/visualizador_corrientes/visualizador_corrientes.md) | `m_ini, m_fut, m_riesgo, fechas, clima, pasos, ...` | `str` (ruta HTML Folium) | `visualizador_corrientes.py` |
 | 29 | [`generar_mapas_corrientes`](files/visualizador_corrientes/functions.md#generar_mapas_corrientes) | [`visualizador_corrientes.py`](files/visualizador_corrientes/visualizador_corrientes.md) | `m_ini, m_fut, m_riesgo, fechas, clima, pasos, ...` | `dict` (rutas y desglose) | `simulador_predictivo.py` |
-| 30 | [`cargar_geometria_argentina`](files/visualizador_argentina/functions.md#cargar_geometria_argentina) | [`visualizador_argentina.py`](files/visualizador_argentina/visualizador_argentina.md) | Ninguno | `GeoDataFrame` | `visualizador_argentina.py` |
-| 31 | [`_crear_data_uri_rgba_argentina`](files/visualizador_argentina/functions.md#_crear_data_uri_rgba_argentina) | [`visualizador_argentina.py`](files/visualizador_argentina/visualizador_argentina.md) | `matriz, color_rgb, alfa` | `str` (Data URI Base64) | `visualizador_argentina.py` |
-| 32 | [`generar_mapa_estatico_argentina`](files/visualizador_argentina/functions.md#generar_mapa_estatico_argentina) | [`visualizador_argentina.py`](files/visualizador_argentina/visualizador_argentina.md) | `m_ini, m_fut, m_riesgo, fechas, clima, pasos, ...` | `str` (ruta PNG 4 paneles) | `visualizador_argentina.py` |
-| 33 | [`generar_mapa_interactivo_argentina`](files/visualizador_argentina/functions.md#generar_mapa_interactivo_argentina) | [`visualizador_argentina.py`](files/visualizador_argentina/visualizador_argentina.md) | `m_ini, m_fut, m_riesgo, fechas, clima, pasos, ...` | `str` (ruta HTML Folium) | `visualizador_argentina.py` |
-| 34 | [`generar_mapas_argentina`](files/visualizador_argentina/functions.md#generar_mapas_argentina) | [`visualizador_argentina.py`](files/visualizador_argentina/visualizador_argentina.md) | `m_ini, m_fut, m_riesgo, fechas, clima, pasos, ...` | `dict` (rutas de mapas) | `simulador_predictivo.py` |
-| 35 | [`main`](files/main/functions.md#main) | [`main.py`](files/main/main.md) | Ninguno | `None` | `main.py` (Entrypoint CLI) |
-| 36 | [`Bloques 1 a 4 (Script)`](files/procesar_incendio/functions.md) | [`procesar_incendio.py`](files/procesar_incendio/procesar_incendio.md) | Archivo JSON crudo, umbrales FRP | `incendios_dia_pico.csv` | Diagnóstico satelital exploratorio |
+| 30 | [`main`](files/main/functions.md#main) | [`main.py`](files/main/main.md) | Ninguno | `None` | `main.py` (Entrypoint CLI) |
+| 31 | [`Bloques 1 a 4 (Script)`](files/procesar_incendio/functions.md) | [`procesar_incendio.py`](files/procesar_incendio/procesar_incendio.md) | Archivo JSON crudo, umbrales FRP | `incendios_dia_pico.csv` | Diagnóstico satelital exploratorio |
 
 ---
 
@@ -327,14 +336,12 @@ La siguiente tabla resume todas las funciones y componentes de procesamiento del
    ```
 2. **Ingreso de parámetros de prueba recomendados (Megaincendio de Corrientes 2022):**
    - **Fecha Inicial:** `2022-02-17`
-   - **Fecha Final:** `2022-02-19` (o presionar Enter para analizar solo el día inicial)
+   - **Fecha Final:** `2022-02-19` (o presionar Enter para calibrar automáticamente hacia el día siguiente)
 3. **Archivos de salida generados en la carpeta `output/`:**
    - **📊 `output/mapa_riesgo_predictivo.png`:** Matriz comparativa de riesgo isócrono del simulador (4 paneles en alta resolución a 300 DPI: Foco Base Observado, Predicción +24h Táctica, Predicción +48h Preventiva y Predicción +72h Estratégica con código isócrono acumulativo).
    - **📍 `output/mapa_corrientes_prediccion.png`:** Mapa GIS de alta resolución (300 DPI) con 4 paneles horizontales georreferenciados sobre los 25 departamentos de Corrientes, con rótulos de texto protegidos por halo blanco (`path_effects`).
    - **🌐 `output/mapa_corrientes_interactivo.html`:** Mapa web interactivo en Folium de Corrientes con selector de capas (CartoDB Positron, OpenStreetMap y Satélite Esri World Imagery), división departamental oficial con tooltips interactivos, y capas raster conmutables independientes en Base64 para cada horizonte temporal (+24h, +48h, +72h e Isócronas).
-   - **🇦🇷 `output/mapa_argentina_prediccion.png`:** Mapa cartográfico GIS (300 DPI) con 4 paneles horizontales análogos a Corrientes sobre el territorio completo de la República Argentina, manteniendo la misma vista nacional sin distorsiones de escala ni encuadre.
-   - **🌐 `output/mapa_argentina_interactivo.html`:** Mapa web interactivo en Folium de la República Argentina con división provincial oficial simplificada, capas satelitales, minimapa y leyenda climatológica flotante.
-   - **💾 `output/matriz_objetivo_limpia_AAAA-MM-DD.npy`:** Matrices binarias rasterizadas y filtradas de la base de la NASA.
-   - **🖼️ `output/silueta_fractal_limpia_AAAA-MM-DD.png`:** Siluetas fractales continuas del cuerpo principal de fuego.
+   - **💾 `output/npy/matriz_objetivo_limpia_AAAA-MM-DD.npy`:** Subcarpeta de matrices binarias rasterizadas y filtradas de la base de la NASA.
+   - **🖼️ `output/siluetas/silueta_fractal_limpia_AAAA-MM-DD.png`:** Subcarpeta de siluetas fractales continuas de los frentes de fuego procesados.
 
 

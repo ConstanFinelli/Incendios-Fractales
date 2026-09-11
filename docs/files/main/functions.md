@@ -11,11 +11,11 @@
 - **Lógica interna:**
   1. Imprime el encabezado y banner de inicialización del sistema.
   2. Solicita interactivamente la fecha inicial (`fecha_inicio`) y fecha final (`fecha_fin`). Si la fecha inicial está vacía, aborta la ejecución con código de error `1`.
-  3. Evalúa si el análisis es unitemporal (`fecha_inicio == fecha_fin`) o una serie temporal multitemporal.
-  4. Llama al subproceso de extracción satelital (`procesar_fecha` o `procesar_rango_fechas`) y verifica que existan registros válidos.
+  3. Si la fecha final está vacía o coincide con la inicial, autoconfigura el avance dinámico al día siguiente (`fecha_inicio + 1 día`) asegurando la calibración temporal del modelo.
+  4. Llama al subproceso de extracción satelital (`procesar_rango_fechas` o `procesar_fecha`), generando las matrices en `output/npy/` y las siluetas en `output/siluetas/`.
   5. Ejecuta la optimización inversa llamando a `ejecutar_algoritmo_genetico(datos_entrada)` para inferir las condiciones microclimáticas.
   6. Dispara la fase predictiva invocando `ejecutar_prediccion(...)`.
-  7. Imprime el resumen consolidado de las rutas de todos los artefactos generados.
+  7. Imprime el resumen consolidado de las rutas de todos los artefactos generados en `output/`.
 
 ---
 
@@ -26,10 +26,10 @@ Este archivo no reimplementa lógica satelital, evolutiva ni cartográfica, sino
 ### Provenientes de `ver_mapa_filtrado.py`:
 - **`procesar_rango_fechas(fecha_inicio, fecha_fin)`**:
   - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/ver_mapa_filtrado/functions.md`](../ver_mapa_filtrado/functions.md).
-  - *Rol en `main.py`:* Procesa secuencialmente cada día del intervalo satelital, filtrando la región geográfica, dilatando y aislando el componente conectado principal.
+  - *Rol en `main.py`:* Procesa secuencialmente cada día del intervalo satelital, filtrando la región geográfica de Corrientes, dilatando a radio físico ($2$ iteraciones) y conservando los clusters con masa crítica ($k \ge 3$).
 - **`procesar_fecha(fecha_elegida=None)`**:
   - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/ver_mapa_filtrado/functions.md`](../ver_mapa_filtrado/functions.md).
-  - *Rol en `main.py`:* Procesa una única fecha cuando el usuario no define un rango multitemporal.
+  - *Rol en `main.py`:* Procesa una única fecha cuando se requiere de forma aislada.
 
 ### Provenientes de `algoritmo_genetico.py`:
 - **`ejecutar_algoritmo_genetico(entradas_matrices)`**:

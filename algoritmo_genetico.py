@@ -37,8 +37,16 @@ def cargar_datos_serie_temporal(entradas):
     
     for fecha, ruta in entradas:
         if not os.path.exists(ruta):
-            print(f"Advertencia: No se encontró el archivo {ruta}. Se omitirá.")
-            continue
+            nombre_solo = os.path.basename(ruta)
+            ruta_alt1 = os.path.join('output', 'npy', nombre_solo)
+            ruta_alt2 = os.path.join('output', nombre_solo)
+            if os.path.exists(ruta_alt1):
+                ruta = ruta_alt1
+            elif os.path.exists(ruta_alt2):
+                ruta = ruta_alt2
+            else:
+                print(f"Advertencia: No se encontró el archivo {ruta}. Se omitirá.")
+                continue
             
         matriz_dia = np.load(ruta)
         
@@ -77,11 +85,11 @@ def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_PO
     """
     Evalúa el fitness del individuo a lo largo de la evolución temporal del incendio.
     
-    Si hay múltiples días (T0, T1, ... Tk):
-      1. Inicializa el AC con el fuego del Día 0 (T0).
-      2. Para cada transición (T0->T1, T1->T2, ...), avanza 'pasos_por_dia' pasos en el AC.
-      3. Evalúa la concordancia (Fractal + IoU) contra la foto satelital real de cada día.
-      4. Promedia el fitness obtenido entre todos los días evaluados.
+    Principio físico-metodológico:
+      El punto de partida de la simulación son siempre las celdas correspondientes
+      a los puntos de calor del día de inicio (T0). Desde allí, el autómata celular
+      se expande a las demás zonas buscando reproducir la evolución observada
+      en los días sucesivos (T1, ..., Tk).
       
     Promedia los resultados a lo largo de 'num_simulaciones' corridas Monte Carlo.
     """
@@ -91,20 +99,29 @@ def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_PO
     if total_dias == 0:
         return 0.0
         
-    # --- CASO A: UN SOLO DÍA (Evaluación Estática) ---
+    # --- CASO A: UN SOLO DÍA (Punto de partida en celdas iniciales y expansión de prueba) ---
     if total_dias == 1:
         matriz_real = datos_serie[0]['matriz']
         D_objetivo = datos_serie[0]['dimension_fractal']
-        y_coords, x_coords = np.where(matriz_real > 0)
-        cy = int(np.mean(y_coords)) if len(y_coords) > 0 else 128
-        cx = int(np.mean(x_coords)) if len(x_coords) > 0 else 128
         
         suma_fitness = 0.0
         for _ in range(num_simulaciones):
-            _, matriz_binaria = simular_incendio_AC(
-                viento_vel=viento_vel, viento_dir=viento_dir, humedad=humedad, combustible=combustible,
-                pasos_tiempo=100, centro_y=cy, centro_x=cx
+            # Inicializar la grilla con los puntos de calor del día de inicio
+            grilla_sim = np.copy(matriz_real).astype(int)
+            if np.max(grilla_sim) == 1:
+                grilla_sim[grilla_sim > 0] = 1
+                
+            # Avanzar expansión desde las celdas de calor iniciales
+            grilla_sim = _avanzar_pasos_AC(
+                grilla_sim,
+                viento_vel=viento_vel,
+                viento_dir=viento_dir,
+                humedad=humedad,
+                combustible=combustible,
+                pasos_tiempo=pasos_por_dia
             )
+            matriz_binaria = np.where(grilla_sim > 0, 1, 0)
+            
             D_sim = calcular_dimension_fractal_directa(matriz_binaria)
             error_fractal = abs(D_objetivo - D_sim)
             fitness_fractal = 1.0 / (1.0 + error_fractal)

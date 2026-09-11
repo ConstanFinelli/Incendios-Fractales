@@ -13,7 +13,6 @@
   5. Construye la matriz de riesgo isócrono (`mapa_riesgo`) asignando los valores discretos $0$ (intacta), $1$ (base), $2$ (+24h), $3$ (+48h) y $4$ (+72h).
   6. Genera y guarda la figura comparativa multipanel `output/mapa_riesgo_predictivo.png` con 4 paneles horizontales.
   7. Invoca con manejo robusto de excepciones a `generar_mapas_corrientes` de `visualizador_corrientes.py`.
-  8. Invoca con manejo robusto de excepciones a `generar_mapas_argentina` de `visualizador_argentina.py`.
 - **Parámetros:**
   - `datos_entrada` (list, np.ndarray o str): Serie temporal o matriz directa.
   - `mejores_variables` (tuple o list): `(viento_vel, viento_dir, humedad, combustible)`.
@@ -33,9 +32,4 @@
 - **`generar_mapas_corrientes`**:
   - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/visualizador_corrientes/functions.md`](../visualizador_corrientes/functions.md).
   - *Rol en `simulador_predictivo.py`:* Proyecta la predicción sobre el polígono y los 25 departamentos de la Provincia de Corrientes, generando tanto el mapa estático PNG en 4 paneles como el mapa web interactivo en Folium y el informe de impacto departamental.
-
-### Provenientes de `visualizador_argentina.py`:
-- **`generar_mapas_argentina`**:
-  - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/visualizador_argentina/functions.md`](../visualizador_argentina/functions.md).
-  - *Rol en `simulador_predictivo.py`:* Proyecta la evolución del siniestro a escala nacional sobre el mapa completo de la República Argentina, generando el mapa estático PNG de 4 paneles y el mapa interactivo web de Folium.
 

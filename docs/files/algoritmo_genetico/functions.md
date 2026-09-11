@@ -36,9 +36,10 @@
 <a id="evaluar_fitness_multitemporal"></a>
 ### `evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES)`
 - **Firma:** `def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES):`
-- **Descripción:** Evalúa la calidad de un individuo en $num\_simulaciones$ réplicas Monte Carlo:
-  - **Caso estático (1 día):** Inicializa el AC con un foco puntual centrado en el centroide de masa del fuego satelital, ejecuta 100 pasos y calcula el fitness híbrido evaluando la dimensión fractal directamente con `calcular_dimension_fractal_directa` y la superposición espacial IoU contra la foto del día.
-  - **Caso multitemporal (> 1 día):** Inicializa el AC con el fuego del Día 0 ($T_0$). Para cada transición temporal ($T_{k-1} \to T_k$), avanza la grilla continua `pasos_por_dia` pasos (30 ciclos) usando `_avanzar_pasos_AC`, mide el fitness híbrido (50% Fractal directo + 50% IoU) contra la foto real del día $T_k$, y promedia las aptitudes de todas las etapas. Elimina el paso previo de erosión morfológica en las 2,400 simulaciones, aumentando el rendimiento y precisión sobre frentes delgados (T1.5).
+- **Descripción:** Evalúa la calidad de un individuo en $num\_simulaciones$ réplicas Monte Carlo bajo el principio físico de expansión desde celdas iniciales:
+  - **Punto de Partida Físico ($T_0$):** El autómata celular se inicializa siempre con **todas las celdas activas correspondientes a los puntos de calor del día de inicio**, sin forzar su colapso a un baricentro único.
+  - **Evolución Multitemporal hacia los demás días:** Para cada transición temporal ($T_{k-1} \to T_k$), avanza la grilla continua `pasos_por_dia` pasos (30 ciclos) usando `_avanzar_pasos_AC`, expandiéndose hacia las demás zonas y midiendo la concordancia híbrida (50% Dimensión Fractal directa $D$ + 50% IoU) contra la foto satelital real del día $T_k$. Promedia las aptitudes de todas las etapas.
+  - **Caso de 1 solo día:** Si se suministra una sola fecha, la simulación arranca igualmente desde todas las celdas de calor reales observadas en dicha fecha y avanza `pasos_por_dia` pasos, contrastando la preservación fractal y solapamiento.
 - **Parámetros:**
   - `individuo` (list): Vector de 4 genes.
   - `datos_serie` (list): Lista devuelta por `cargar_datos_serie_temporal`.

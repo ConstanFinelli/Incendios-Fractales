@@ -15,6 +15,11 @@ LON_MIN, LON_MAX = -59.8, -55.6
 ITERACIONES_DILATACION = 2       # Radio físico de pavesas y resolución del sensor (~3.1 km)
 UMBRAL_MIN_CELDAS_CLUSTER = 3    # Masa crítica para filtrar ruido instrumental VIIRS
 
+# Directorios de almacenamiento estructurado
+DIR_OUTPUT = 'output'
+DIR_NPY = os.path.join(DIR_OUTPUT, 'npy')
+DIR_SILUETAS = os.path.join(DIR_OUTPUT, 'siluetas')
+
 _df_completo_cache = None
 
 def obtener_df_completo():
@@ -70,12 +75,13 @@ def procesar_una_fecha(fecha, df_fuente=None, verbose=True):
     for lat_i, lon_i in zip(lats_idx, lons_idx):
         matriz_binaria[lat_i, lon_i] = 1
         
-    os.makedirs('output', exist_ok=True)
-    np.save(f'output/matriz_fractal_recorte_{fecha}.npy', matriz_binaria)
+    os.makedirs(DIR_NPY, exist_ok=True)
+    os.makedirs(DIR_SILUETAS, exist_ok=True)
+    np.save(os.path.join(DIR_NPY, f'matriz_fractal_recorte_{fecha}.npy'), matriz_binaria)
     
     # Filtro morfológico de dilatación física controlada
     matriz_continua = binary_dilation(matriz_binaria, iterations=ITERACIONES_DILATACION).astype(int)
-    np.save(f'output/matriz_fractal_recorte_continua_{fecha}.npy', matriz_continua)
+    np.save(os.path.join(DIR_NPY, f'matriz_fractal_recorte_continua_{fecha}.npy'), matriz_continua)
     
     # Componentes conectados (filtrado por masa crítica multicluster)
     estructura_vecindad = np.ones((3, 3))
@@ -95,16 +101,17 @@ def procesar_una_fecha(fecha, df_fuente=None, verbose=True):
     else:
         matriz_limpia = matriz_continua
         
-    nombre_matriz_limpia_npy = f'output/matriz_objetivo_limpia_{fecha}.npy'
+    nombre_matriz_limpia_npy = os.path.join(DIR_NPY, f'matriz_objetivo_limpia_{fecha}.npy')
     np.save(nombre_matriz_limpia_npy, matriz_limpia)
     
-    # Renderizar y guardar siluetas
+    # Renderizar y guardar siluetas en output/siluetas/
     plt.figure(figsize=(6,6))
     plt.imshow(matriz_limpia, cmap='binary', origin='lower')
     plt.title(f"Frentes Activos Filtrados por Masa Crítica ({fecha})")
     plt.xlabel("Índice X")
     plt.ylabel("Índice Y")
-    plt.savefig(f'output/silueta_fractal_limpia_{fecha}.png', dpi=300)
+    ruta_silueta = os.path.join(DIR_SILUETAS, f'silueta_fractal_limpia_{fecha}.png')
+    plt.savefig(ruta_silueta, dpi=300)
     plt.close()
     
     return nombre_matriz_limpia_npy

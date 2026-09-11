@@ -172,24 +172,6 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
         traceback.print_exc()
         print(f"Advertencia al proyectar mapa de Corrientes: {e}")
         
-    # Generar transposición espacial sobre el mapa de la República Argentina
-    try:
-        from visualizador_argentina import generar_mapas_argentina
-        generar_mapas_argentina(
-            matriz_inicial=matriz_inicial,
-            matriz_final=matriz_final,
-            matriz_futura=matrices_horizontes,
-            mapa_riesgo=mapa_riesgo,
-            fecha_inicial=fecha_inicial,
-            fecha_final=fecha_final,
-            mejores_variables=mejores_variables,
-            pasos_futuros=pasos_por_dia * 3
-        )
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        print(f"Advertencia al proyectar mapa de Argentina: {e}")
-        
     return mapa_riesgo
 
 

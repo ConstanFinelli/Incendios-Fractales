@@ -60,7 +60,7 @@ Este módulo constituye la **Fase 2** del proyecto. Conecta los datos satelitale
 - **Graficación:** `matplotlib.pyplot`.
 - **Módulos del proyecto:**
   - `automata_celular` (`simular_incendio_AC`, `_avanzar_pasos_AC`)
-  - `calcular_dimension_fractal` (`extraer_perimetro`, `calcular_box_counting`)
+  - `calcular_dimension_fractal` (`extraer_perimetro`, `calcular_box_counting`, `calcular_dimension_fractal_directa`)
   - `ver_mapa_filtrado` (`procesar_rango_fechas`, en modo `__main__`)
 
 ---

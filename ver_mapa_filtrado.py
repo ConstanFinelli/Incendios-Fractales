@@ -11,6 +11,10 @@ import os
 LAT_MIN, LAT_MAX = -30.8, -27.2
 LON_MIN, LON_MAX = -59.8, -55.6
 
+# Parámetros físicos de filtrado y resolución espacial
+ITERACIONES_DILATACION = 2       # Radio físico de pavesas y resolución del sensor (~3.1 km)
+UMBRAL_MIN_CELDAS_CLUSTER = 3    # Masa crítica para filtrar ruido instrumental VIIRS
+
 _df_completo_cache = None
 
 def obtener_df_completo():
@@ -69,18 +73,25 @@ def procesar_una_fecha(fecha, df_fuente=None, verbose=True):
     os.makedirs('output', exist_ok=True)
     np.save(f'output/matriz_fractal_recorte_{fecha}.npy', matriz_binaria)
     
-    # Filtro morfológico de dilatación
-    matriz_continua = binary_dilation(matriz_binaria, iterations=11).astype(int)
+    # Filtro morfológico de dilatación física controlada
+    matriz_continua = binary_dilation(matriz_binaria, iterations=ITERACIONES_DILATACION).astype(int)
     np.save(f'output/matriz_fractal_recorte_continua_{fecha}.npy', matriz_continua)
     
-    # Componentes conectados (limpieza de ruido e islas)
+    # Componentes conectados (filtrado por masa crítica multicluster)
     estructura_vecindad = np.ones((3, 3))
     matrices_etiquetadas, num_features = label(matriz_continua, structure=estructura_vecindad)
     tamano_componentes = np.bincount(matrices_etiquetadas.ravel())
     
     if len(tamano_componentes) > 1:
-        id_componente_principal = np.argmax(tamano_componentes[1:]) + 1
-        matriz_limpia = (matrices_etiquetadas == id_componente_principal).astype(int)
+        # Conservar todos los clusters que superan la masa crítica mínima (descartando ruido aislado)
+        ids_validos = np.where(tamano_componentes >= UMBRAL_MIN_CELDAS_CLUSTER)[0]
+        ids_validos = ids_validos[ids_validos != 0]  # Excluir etiqueta de fondo (0)
+        
+        # Fallback defensivo: si ningún cluster supera el umbral, conservar el mayor disponible
+        if len(ids_validos) == 0:
+            ids_validos = [np.argmax(tamano_componentes[1:]) + 1]
+            
+        matriz_limpia = np.isin(matrices_etiquetadas, ids_validos).astype(int)
     else:
         matriz_limpia = matriz_continua
         
@@ -90,7 +101,7 @@ def procesar_una_fecha(fecha, df_fuente=None, verbose=True):
     # Renderizar y guardar siluetas
     plt.figure(figsize=(6,6))
     plt.imshow(matriz_limpia, cmap='binary', origin='lower')
-    plt.title(f"Cuerpo Principal Unificado y Limpio ({fecha})")
+    plt.title(f"Frentes Activos Filtrados por Masa Crítica ({fecha})")
     plt.xlabel("Índice X")
     plt.ylabel("Índice Y")
     plt.savefig(f'output/silueta_fractal_limpia_{fecha}.png', dpi=300)

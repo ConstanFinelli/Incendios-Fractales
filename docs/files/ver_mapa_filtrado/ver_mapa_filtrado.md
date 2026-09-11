@@ -25,10 +25,10 @@ Este módulo es el pilar de la **Fase 1** (Preprocesamiento Satelital):
    Rasterización Discreta 256x256 (matriz_fractal_recorte_*.npy)
             │
             ▼
-   Dilatación Morfológica (11 iteraciones) (matriz_fractal_recorte_continua_*.npy)
+   Dilatación Física de Pavesas (2 iteraciones, ~3.1 km) (matriz_fractal_recorte_continua_*.npy)
             │
             ▼
-   Extracción de Componente Conexo Principal (matriz_objetivo_limpia_*.npy)
+   Filtrado Multicluster por Masa Crítica (≥ 3 celdas) (matriz_objetivo_limpia_*.npy)
             │
             ▼
    [Matriz Limpia para AG y Simulación] + [Silueta Gráfica PNG]
@@ -46,8 +46,8 @@ Este módulo es el pilar de la **Fase 1** (Preprocesamiento Satelital):
 
 ### Salidas (generadas en `output/`):
 - `matriz_fractal_recorte_<fecha>.npy`: Matriz cruda $256 \times 256$ de puntos de calor detectados.
-- `matriz_fractal_recorte_continua_<fecha>.npy`: Matriz tras 11 ciclos de dilatación morfológica.
-- `matriz_objetivo_limpia_<fecha>.npy`: Matriz con el cuerpo principal de fuego unificado (ruido aislado eliminado).
+- `matriz_fractal_recorte_continua_<fecha>.npy`: Matriz tras 2 ciclos de dilatación morfológica física (~3.1 km).
+- `matriz_objetivo_limpia_<fecha>.npy`: Matriz multicluster con frentes de fuego activos filtrados por masa crítica (ruido aislado de 1-2 celdas eliminado).
 - `silueta_fractal_limpia_<fecha>.png`: Renderizado monocromático de alta resolución a 300 DPI con `origin='lower'`.
 
 ---
@@ -67,12 +67,13 @@ $$r_i = \left\lfloor \frac{\text{lat}_i - \text{LAT\_MIN}}{\text{LAT\_MAX} - \te
 $$c_i = \left\lfloor \frac{\text{lon}_i - \text{LON\_MIN}}{\text{LON\_MAX} - \text{LON\_MIN}} \times (N - 1) \right\rfloor$$
 Ambos índices se truncan con `np.clip` al rango $[0, N-1]$.
 
-### 2. Dilatación Morfológica Binaria:
-Para cerrar discontinuidades espaciales entre focos dispersos causados por el intervalo de muestreo satelital o nubosidad parcial, se aplica una dilatación binaria iterativa con un elemento estructurante de vecindad $3 \times 3$ durante 11 iteraciones:
+### 2. Dilatación Morfológica Física Calibrada (T1.1):
+Para representar físicamente el radio de dispersión térmica y salto de pavesas (*fire spotting*) entre frentes cercanos, se aplica una dilatación binaria iterativa con un elemento estructurante de vecindad $3 \times 3$ acotada a **2 iteraciones** (`ITERACIONES_DILATACION = 2`):
 $$A \oplus B = \bigcup_{b \in B} A_b$$
+Esto genera un radio de influencia de $\approx 3.1\text{ km}$, evitando la fusión irreal de focos distantes que causaba la dilatación previa de 11 iteraciones.
 
-### 3. Extracción del Componente Conexo Principal:
-Se utiliza la función `scipy.ndimage.label` con conectividad de 8 vecinos para segmentar los clusters de fuego en islas independientes. Se computa el tamaño de cada componente mediante `np.bincount` y se aísla únicamente el componente de máxima cardinalidad:
-$$C_{\text{principal}} = \arg\max_{k \ge 1} |C_k|$$
-Esto descarta quemas prescritas menores o anomalías térmicas industriales ajenas al gran incendio forestal modelado.
+### 3. Filtrado Multicluster por Masa Crítica (T1.2):
+Se utiliza la función `scipy.ndimage.label` con conectividad de 8 vecinos para segmentar los clusters de fuego en islas independientes. En lugar de descartar todos los componentes secundarios excepto el mayor (`argmax`), se preservan **todos los clusters** cuya cardinalidad supere un umbral de masa crítica ($k \ge 3$ celdas):
+$$C_{\text{válidos}} = \{ C_i \mid |C_i| \ge \text{UMBRAL\_MIN\_CELDAS\_CLUSTER} \}$$
+Esto elimina falsas alarmas y reflejos térmicos de 1 o 2 píxeles sin recortar los frentes de fuego activos distribuidos en toda la provincia. En caso de que ningún cluster supere el umbral, un mecanismo de reserva defensivo preserva el cluster mayor disponible.
 

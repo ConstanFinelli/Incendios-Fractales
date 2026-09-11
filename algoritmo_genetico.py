@@ -5,7 +5,7 @@ import csv
 import matplotlib.pyplot as plt
 from concurrent.futures import ProcessPoolExecutor
 from automata_celular import simular_incendio_AC, _avanzar_pasos_AC
-from calcular_dimension_fractal import extraer_perimetro, calcular_box_counting
+from calcular_dimension_fractal import extraer_perimetro, calcular_box_counting, calcular_dimension_fractal_directa
 
 # ==============================================================================
 # CONFIGURACIÓN DEL ALGORITMO GENÉTICO
@@ -17,7 +17,7 @@ PASOS_POR_DIA = 30         # CONSTANTE: Pasos de simulación del AC por día cal
 NUM_SIMULACIONES = 3         # Cantidad de corridas Monte Carlo por individuo para mitigar ruido
 
 # PONDERACIÓN DE LA FUNCIÓN DE APTITUD (FITNESS HÍBRIDO)
-PESO_FRACTAL = 0.5           # Peso asignado a la Dimensión Fractal del perímetro
+PESO_FRACTAL = 0.5           # Peso asignado a la Dimensión Fractal del perímetro/frente activo
 PESO_IOU = 0.5               # Peso asignado a la Superposición Espacial (IoU)
 
 def cargar_datos_serie_temporal(entradas):
@@ -49,12 +49,8 @@ def cargar_datos_serie_temporal(entradas):
             matriz_acumulada = np.logical_or(matriz_acumulada > 0, matriz_dia > 0).astype(int)
             
         matriz_real = matriz_acumulada.copy()
-        perimetro_real = extraer_perimetro(matriz_real)
-        
-        try:
-            D_real, *_ = calcular_box_counting(perimetro_real)
-        except Exception:
-            D_real = 1.0
+        # T1.5: Dimensión fractal directa sobre el frente activo multicluster
+        D_real = calcular_dimension_fractal_directa(matriz_real)
             
         datos_serie.append({
             'fecha': fecha,
@@ -109,11 +105,7 @@ def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_PO
                 viento_vel=viento_vel, viento_dir=viento_dir, humedad=humedad, combustible=combustible,
                 pasos_tiempo=100, centro_y=cy, centro_x=cx
             )
-            perimetro = extraer_perimetro(matriz_binaria)
-            try:
-                D_sim, *_ = calcular_box_counting(perimetro)
-            except Exception:
-                D_sim = 0.0
+            D_sim = calcular_dimension_fractal_directa(matriz_binaria)
             error_fractal = abs(D_objetivo - D_sim)
             fitness_fractal = 1.0 / (1.0 + error_fractal)
             interseccion = np.logical_and(matriz_real > 0, matriz_binaria > 0).sum()
@@ -150,13 +142,9 @@ def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_PO
             )
             
             matriz_binaria_sim = np.where(grilla_sim > 0, 1, 0)
-            perimetro_sim = extraer_perimetro(matriz_binaria_sim)
             
-            # 1. Fitness Fractal del día t
-            try:
-                D_sim_t, *_ = calcular_box_counting(perimetro_sim)
-            except Exception:
-                D_sim_t = 0.0
+            # 1. Fitness Fractal del día t (Directo sobre frente activo T1.5)
+            D_sim_t = calcular_dimension_fractal_directa(matriz_binaria_sim)
             error_fractal = abs(D_objetivo_t - D_sim_t)
             fitness_fractal = 1.0 / (1.0 + error_fractal)
             

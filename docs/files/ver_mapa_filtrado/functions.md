@@ -19,9 +19,9 @@
   2. Aplica el filtro espacial del bounding box de Corrientes (`LAT_MIN, LAT_MAX, LON_MIN, LON_MAX`).
   3. Si no hay focos en la zona, retorna `None`.
   4. Rasteriza los puntos a una matriz binaria de $256 \times 256$ y la guarda como `output/matriz_fractal_recorte_{fecha}.npy`.
-  5. Aplica 11 iteraciones de dilatación morfológica binaria (`scipy.ndimage.binary_dilation`) y la guarda como `output/matriz_fractal_recorte_continua_{fecha}.npy`.
-  6. Segmenta los clusters conectados con `scipy.ndimage.label`, identifica el componente conexo con mayor número de celdas (el cuerpo principal del incendio) y descarta el ruido aislado.
-  7. Guarda la matriz final resultante en `output/matriz_objetivo_limpia_{fecha}.npy`.
+  5. Aplica 2 iteraciones de dilatación morfológica física (`ITERACIONES_DILATACION = 2`, ~3.1 km de radio) y la guarda como `output/matriz_fractal_recorte_continua_{fecha}.npy`.
+  6. Segmenta los clusters conectados con `scipy.ndimage.label` y aplica filtrado por masa crítica (`UMBRAL_MIN_CELDAS_CLUSTER = 3`), preservando todos los frentes activos significativos de la provincia y descartando únicamente ruido instrumental.
+  7. Guarda la matriz multicluster resultante en `output/matriz_objetivo_limpia_{fecha}.npy`.
   8. Genera y guarda la figura en alta resolución `output/silueta_fractal_limpia_{fecha}.png` con orientación vertical correcta (`origin='lower'`).
 - **Parámetros:**
   - `fecha` (str): Fecha a procesar en formato `AAAA-MM-DD`.

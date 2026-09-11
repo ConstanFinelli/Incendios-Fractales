@@ -13,20 +13,24 @@ Este módulo suministra la métrica morfométrica clave que fundamenta el proyec
 ```
  [Matriz Binaria de Fuego]
             │
-            ▼
-    extraer_perimetro()  ◄── Erosión morfológica binaria
-            │
-            ▼
- [Matriz de Perímetro (Rugosidad)]
-            │
-            ▼
-  calcular_box_counting() ◄── Reshape 4D vectorizado + Conteo de cajas
-            │
-            ▼
-  Regresión Lineal Log-Log [ln(1/ε) vs ln(N(ε))]
-            │
-            ▼
-    Dimensión Fractal (D) ──► Utilizada en la Función de Fitness del AG
+            ├─────────────────────────────────────────┐
+            ▼                                         ▼
+    extraer_perimetro()                      Cálculo Directo (T1.5)
+ (Erosión morfológica defensiva)          (Polvos fractales / Frentes)
+            │                                         │
+            ▼                                         ▼
+  [Matriz de Perímetro]                   [Matriz de Celdas Activas]
+            │                                         │
+            └────────────────────┬────────────────────┘
+                                 │
+                                 ▼
+                     calcular_box_counting() ◄── Reshape 4D vectorizado + Conteo de cajas
+                                 │
+                                 ▼
+                       Regresión Lineal Log-Log [ln(1/ε) vs ln(N(ε))]
+                                 │
+                                 ▼
+                         Dimensión Fractal (D) ──► Utilizada en la Función de Fitness del AG
 ```
 
 ---
@@ -67,4 +71,10 @@ Esta operación reorganiza la memoria a nivel de punteros C en NumPy, evaluando 
 Posteriormente, se ajusta un polinomio de grado 1 (`np.polyfit`) sobre los pares de puntos logarítmicos:
 $$\ln N(\epsilon) = D \cdot \ln(1/\epsilon) + c$$
 La pendiente del ajuste resultante es la dimensión fractal $D$.
+
+### Validez Matemática sobre Conjuntos Dispersos (Polvos Fractales - T1.5):
+La formulación de Box-Counting de Minkowski-Bouligand no exige que el objeto geométrico sea un continuo simplemente conexo. Es formalmente aplicable a cualquier conjunto acotado no vacío en $\mathbb{R}^2$, incluidos conjuntos desconectados, multifocales o polvos fractales (*Cantor dust*). Al aplicar Box-Counting directamente sobre el conjunto de celdas activas (`matriz_binaria > 0`):
+1. Se cuantifica la dispersión espacial y rugosidad multiescala de los frentes de fuego reales.
+2. Se eliminan artefactos de borde derivados de la erosión en estructuras de 1 píxel.
+3. Se optimiza el tiempo de cómputo al suprimir el paso intermedio de erosión morfológica durante las miles de evaluaciones del Algoritmo Genético.
 

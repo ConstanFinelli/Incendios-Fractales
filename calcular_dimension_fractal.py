@@ -4,22 +4,27 @@ from scipy.ndimage import binary_erosion
 
 def extraer_perimetro(matriz_binaria):
     """
-    Extrae el borde del incendio. La dimensión fractal del fuego se mide 
-    sobre su perímetro rugoso, no sobre el área sólida.
+    Extrae el borde morfológico del incendio. 
+    Si la estructura contiene líneas o frentes finos donde la erosión elimina 
+    completamente las celdas, preserva dichas celdas como frontera activa natural.
     """
-    # Erosión: "Achica" el fuego un píxel hacia adentro
     matriz_erosionada = binary_erosion(matriz_binaria)
-    
-    # El perímetro es la diferencia entre la forma original y la erosionada
     perimetro = matriz_binaria.astype(int) - matriz_erosionada.astype(int)
+    
+    # Si la erosión consumió completamente frentes delgados, el conjunto en sí es frontera activa
+    if np.sum(perimetro) == 0 and np.sum(matriz_binaria) > 0:
+        return (matriz_binaria > 0).astype(int)
+        
     return perimetro
 
-def calcular_box_counting(matriz_perimetro):
+def calcular_box_counting(matriz_binaria):
     """
     Aplica el algoritmo de Box-Counting de alta velocidad (Vectorizado 100% NumPy).
+    Es matemáticamente válido tanto para contornos perimetrales como para conjuntos 
+    dispersos o multifocales de celdas activas (polvos fractales en R^2).
     Retorna la dimensión fractal (D), los tamaños de caja y los conteos.
     """
-    n = min(matriz_perimetro.shape)
+    n = min(matriz_binaria.shape)
     
     tamanos_caja = []
     conteos_cajas = []
@@ -27,12 +32,12 @@ def calcular_box_counting(matriz_perimetro):
     tamano = n
     while tamano >= 1:
         if tamano == n:
-            contador = 1 if np.any(matriz_perimetro) else 0
+            contador = 1 if np.any(matriz_binaria) else 0
         elif tamano == 1:
-            contador = np.count_nonzero(matriz_perimetro)
+            contador = np.count_nonzero(matriz_binaria)
         else:
             # Reshape matricial en bloques 2D sin bucles Python (Ultra rápido en C)
-            bloques = matriz_perimetro.reshape(n // tamano, tamano, n // tamano, tamano).any(axis=(1, 3))
+            bloques = matriz_binaria.reshape(n // tamano, tamano, n // tamano, tamano).any(axis=(1, 3))
             contador = np.count_nonzero(bloques)
             
         tamanos_caja.append(tamano)
@@ -47,6 +52,20 @@ def calcular_box_counting(matriz_perimetro):
     dimension_fractal = coeficientes[0]
     
     return dimension_fractal, x, y, tamanos_caja, conteos_cajas
+
+def calcular_dimension_fractal_directa(matriz_binaria):
+    """
+    Calcula de forma directa la Dimensión Fractal de Box-Counting (D) sobre el conjunto
+    de celdas activas (frentes de fuego) sin necesidad de erosión morfológica previa.
+    Especialmente diseñado para frentes multifocales y polvos fractales en R^2 (T1.5).
+    """
+    if not np.any(matriz_binaria):
+        return 0.0
+    try:
+        D, *_ = calcular_box_counting(matriz_binaria > 0)
+        return float(D)
+    except Exception:
+        return 1.0
 
 # ==========================================
 # EJECUCIÓN PRINCIPAL

@@ -5,7 +5,7 @@
 <a id="cargar_datos_serie_temporal"></a>
 ### `cargar_datos_serie_temporal(entradas)`
 - **Firma:** `def cargar_datos_serie_temporal(entradas):`
-- **Descripción:** Carga desde el disco una o varias matrices satelitales (`.npy`) generadas en la Fase 1. En el caso de una serie multitemporal, va consolidando la cicatriz histórica acumulada mediante una unión lógica, extrae el perímetro morfológico del fuego y computa previamente la Dimensión Fractal real ($D_{\text{real}}$) de cada día con el algoritmo de Box-Counting.
+- **Descripción:** Carga desde el disco una o varias matrices satelitales (`.npy`) generadas en la Fase 1. En el caso de una serie multitemporal, va consolidando la cicatriz histórica acumulada mediante una unión lógica y computa previamente la Dimensión Fractal real ($D_{\text{real}}$) de cada día evaluando directamente el frente activo mediante `calcular_dimension_fractal_directa` (T1.5), sin necesidad de erosión forzada.
 - **Parámetros:**
   - `entradas` (str o list): Ruta de un único archivo `.npy` o lista de tuplas `[(fecha, ruta), ...]`.
 - **Retorno:** `list` de diccionarios con la estructura:
@@ -37,8 +37,8 @@
 ### `evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES)`
 - **Firma:** `def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES):`
 - **Descripción:** Evalúa la calidad de un individuo en $num\_simulaciones$ réplicas Monte Carlo:
-  - **Caso estático (1 día):** Inicializa el AC con un foco puntual centrado en el centroide de masa del fuego satelital, ejecuta 100 pasos y calcula el fitness híbrido contra la foto del día.
-  - **Caso multitemporal (> 1 día):** Inicializa el AC con el fuego del Día 0 ($T_0$). Para cada transición temporal ($T_{k-1} \to T_k$), avanza la grilla continua `pasos_por_dia` pasos (30 ciclos) usando `_avanzar_pasos_AC`, mide el fitness híbrido (50% Fractal + 50% IoU) contra la foto real del día $T_k$, y promedia las aptitudes de todas las etapas.
+  - **Caso estático (1 día):** Inicializa el AC con un foco puntual centrado en el centroide de masa del fuego satelital, ejecuta 100 pasos y calcula el fitness híbrido evaluando la dimensión fractal directamente con `calcular_dimension_fractal_directa` y la superposición espacial IoU contra la foto del día.
+  - **Caso multitemporal (> 1 día):** Inicializa el AC con el fuego del Día 0 ($T_0$). Para cada transición temporal ($T_{k-1} \to T_k$), avanza la grilla continua `pasos_por_dia` pasos (30 ciclos) usando `_avanzar_pasos_AC`, mide el fitness híbrido (50% Fractal directo + 50% IoU) contra la foto real del día $T_k$, y promedia las aptitudes de todas las etapas. Elimina el paso previo de erosión morfológica en las 2,400 simulaciones, aumentando el rendimiento y precisión sobre frentes delgados (T1.5).
 - **Parámetros:**
   - `individuo` (list): Vector de 4 genes.
   - `datos_serie` (list): Lista devuelta por `cargar_datos_serie_temporal`.
@@ -141,6 +141,9 @@
 - **`calcular_box_counting`**:
   - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/calcular_dimension_fractal/functions.md`](../calcular_dimension_fractal/functions.md).
   - *Rol en `algoritmo_genetico.py`:* Computa la dimensión fractal $D$ para comparar el grado de ramificación entre la realidad y la simulación.
+- **`calcular_dimension_fractal_directa`**:
+  - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/calcular_dimension_fractal/functions.md`](../calcular_dimension_fractal/functions.md).
+  - *Rol en `algoritmo_genetico.py`:* Evalúa directamente la dimensión fractal $D$ sobre el frente activo multicluster sin necesidad de erosión morfológica intermedia (T1.5).
 
 ### Provenientes de `ver_mapa_filtrado.py`:
 - **`procesar_rango_fechas`** *(Importado condicionalmente en `if __name__ == '__main__':`)*:

@@ -26,7 +26,7 @@ Este módulo constituye la **Fase 2** del proyecto. Conecta los datos satelitale
         │  • Monte Carlo (5 corridas por individuo)   │
         │  • Fitness híbrido (50% Fractal + 50% IoU)  │
         │  • Selección por torneo (k=3), Cruce, Mut   │
-        │  • Elitismo (top 2 individuos conservados)  │
+        │  • Elitismo (top 4 individuos conservados)  │
         └──────────────────────┬──────────────────────┘
                                │
             ┌──────────────────┴──────────────────┐
@@ -93,6 +93,6 @@ Dado que el autómata celular es probabilístico, un individuo prometedor podrí
 ### Operadores Genéticos y Estrategia Evolutiva:
 - **Selección:** Torneo determinista de tamaño $k = 3$.
 - **Cruce:** Cruce en un punto de valor real (`1-point crossover`).
-- **Mutación:** Mutación aleatoria uniforme sobre un gen con probabilidad $P_m = 0.2$.
-- **Elitismo:** Los 2 individuos más aptos de cada generación se preservan intactos para la siguiente (`NUM_ELITES = 2`), garantizando monotonicidad débil en el mejor fitness histórico.
+- **Mutación:** Mutación aleatoria uniforme sobre un gen con probabilidad $P_m = 0.1$.
+- **Elitismo:** Los 4 individuos más aptos de cada generación se preservan intactos para la siguiente (`NUM_ELITES = 4`), garantizando monotonicidad en el mejor fitness histórico.
 

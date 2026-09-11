@@ -12,7 +12,9 @@ from calcular_dimension_fractal import extraer_perimetro, calcular_box_counting,
 # ==============================================================================
 TAMANO_POBLACION = 32        # Cantidad de hipótesis climáticas por generación
 GENERACIONES = 40             # Número de iteraciones evolutivas
-PROB_MUTACION = 0.2          # Probabilidad de mutar un gen
+PROB_MUTACION = 0.1          # Probabilidad de mutar un gen (10% balanceado)
+NUM_ELITES = 4               # Cantidad de individuos élite conservados intactos (12.5%)
+TAMANO_TORNEO = 3            # Tamaño de muestra en selección por torneo
 PASOS_POR_DIA = 30         # CONSTANTE: Pasos de simulación del AC por día calendario (fácil de modificar)
 NUM_SIMULACIONES = 5         # Cantidad de corridas Monte Carlo por individuo para mitigar ruido
 
@@ -294,7 +296,7 @@ def ejecutar_algoritmo_genetico(entradas_matrices):
     
     print("="*60)
     print("INICIANDO OPTIMIZACIÓN INVERSA PARALELA POR ALGORITMO GENÉTICO")
-    print(f"Configuración: {GENERACIONES} Generaciones | {TAMANO_POBLACION} Individuos | {PASOS_POR_DIA} Pasos/Día")
+    print(f"Configuración: {GENERACIONES} Generaciones | {TAMANO_POBLACION} Individuos ({NUM_ELITES} Élites) | {PASOS_POR_DIA} Pasos/Día")
     print(f"Ponderación Fitness: {PESO_FRACTAL} * Dimensión Fractal + {PESO_IOU} * IoU Espacial")
     print(f"Aceleración por Multiprocesamiento: {num_workers} núcleos CPU activos")
     print("="*60)
@@ -349,14 +351,13 @@ def ejecutar_algoritmo_genetico(entradas_matrices):
             
             print(f"Gen {generacion+1:02d}/{GENERACIONES:02d} | Récord Global: {mejor_fitness_global:.4f} (Gen: {mejor_fit_gen:.4f}, Prom: {avg_fit_gen:.4f}) | Viento: {mejor_individuo_global[0]:.1f}km/h @ {mejor_individuo_global[1]:.1f}° | Humedad: {mejor_individuo_global[2]:.1f}% | Comb: {mejor_individuo_global[3]:.2f}")
             
-            # Elitismo: Conservar los 2 mejores
-            NUM_ELITES = 2
+            # Elitismo: Conservar los mejores individuos intactos
             nueva_poblacion = [list(ind_fit[0]) for ind_fit in fitness_poblacion[:NUM_ELITES]]
             
             # Reproducción (Torneo + Cruce + Mutación)
             while len(nueva_poblacion) < TAMANO_POBLACION:
-                p1 = seleccion_torneo(fitness_poblacion, k=3)
-                p2 = seleccion_torneo(fitness_poblacion, k=3)
+                p1 = seleccion_torneo(fitness_poblacion, k=TAMANO_TORNEO)
+                p2 = seleccion_torneo(fitness_poblacion, k=TAMANO_TORNEO)
                 h1, _ = cruzar(p1, p2)
                 nueva_poblacion.append(mutar(h1))
                 

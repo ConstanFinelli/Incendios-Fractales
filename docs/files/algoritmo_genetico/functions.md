@@ -73,7 +73,7 @@
 <a id="mutar"></a>
 ### `mutar(individuo)`
 - **Firma:** `def mutar(individuo):`
-- **Descripción:** Con probabilidad `PROB_MUTACION` ($0.2$), selecciona aleatoriamente uno de los 4 genes del cromosoma y le asigna un nuevo valor continuo dentro de su rango físico permitido.
+- **Descripción:** Con probabilidad `PROB_MUTACION` ($0.1$), selecciona aleatoriamente uno de los 4 genes del cromosoma y le asigna un nuevo valor continuo dentro de su rango físico permitido.
 - **Parámetros:**
   - `individuo` (list): Cromosoma a mutar.
 - **Retorno:** `list` con el individuo (mutado o inalterado).
@@ -119,7 +119,7 @@
 <a id="ejecutar_algoritmo_genetico"></a>
 ### `ejecutar_algoritmo_genetico(entradas_matrices)`
 - **Firma:** `def ejecutar_algoritmo_genetico(entradas_matrices):`
-- **Descripción:** Función orquestadora de la Fase 2. Inicializa el pool de procesos con `ProcessPoolExecutor` aprovechando todos los núcleos CPU disponibles ($N-1$), inicializa la población aleatoria de 32 individuos y ejecuta el bucle de $40$ generaciones. En cada generación evalúa en paralelo con 5 corridas Monte Carlo por individuo, aplica elitismo (top 2), realiza selección por torneo, cruce y mutación. Al concluir, exporta los reportes CSV y gráficos, retornando el mejor vector climático hallado.
+- **Descripción:** Función orquestadora de la Fase 2. Inicializa el pool de procesos con `ProcessPoolExecutor` aprovechando todos los núcleos CPU disponibles ($N-1$), inicializa la población aleatoria de 32 individuos y ejecuta el bucle de $40$ generaciones. En cada generación evalúa en paralelo con 5 corridas Monte Carlo por individuo, aplica elitismo (top 4), realiza selección por torneo, cruce y mutación. Al concluir, exporta los reportes CSV y gráficos, retornando el mejor vector climático hallado.
 - **Parámetros:**
   - `entradas_matrices`: Matriz única o serie multitemporal.
 - **Retorno:** `list` con las 4 variables óptimas `[viento_vel, viento_dir, humedad, combustible]`, o `None` en caso de fallo.

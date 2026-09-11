@@ -25,10 +25,10 @@ Este módulo es el pilar de la **Fase 1** (Preprocesamiento Satelital):
    Rasterización Discreta 256x256 (matriz_fractal_recorte_*.npy)
             │
             ▼
-   Dilatación Física de Pavesas (2 iteraciones, ~3.1 km) (matriz_fractal_recorte_continua_*.npy)
+   Dilatación Física de Pavesas (1 iteración, ~1.6 km) (matriz_fractal_recorte_continua_*.npy)
             │
             ▼
-   Filtrado Multicluster por Masa Crítica (≥ 3 celdas) (matriz_objetivo_limpia_*.npy)
+   Preservación Integral Multicluster (matriz_objetivo_limpia_*.npy)
             │
             ▼
    [Matriz Limpia para AG y Simulación] + [Silueta Gráfica PNG]
@@ -46,8 +46,8 @@ Este módulo es el pilar de la **Fase 1** (Preprocesamiento Satelital):
 
 ### Salidas (generadas en `output/`):
 - `output/npy/matriz_fractal_recorte_<fecha>.npy`: Matriz cruda $256 \times 256$ de puntos de calor detectados.
-- `output/npy/matriz_fractal_recorte_continua_<fecha>.npy`: Matriz tras 2 ciclos de dilatación morfológica física (~3.1 km).
-- `output/npy/matriz_objetivo_limpia_<fecha>.npy`: Matriz multicluster con frentes de fuego activos filtrados por masa crítica (ruido aislado de 1-2 celdas eliminado).
+- `output/npy/matriz_fractal_recorte_continua_<fecha>.npy`: Matriz tras 1 ciclo de dilatación morfológica física (~1.6 km).
+- `output/npy/matriz_objetivo_limpia_<fecha>.npy`: Matriz multicluster con frentes de fuego activos preservados al 100%.
 - `output/siluetas/silueta_fractal_limpia_<fecha>.png`: Renderizado monocromático de alta resolución a 300 DPI con `origin='lower'`.
 
 ---
@@ -55,7 +55,7 @@ Este módulo es el pilar de la **Fase 1** (Preprocesamiento Satelital):
 ## 4. Dependencias y Librerías
 - **Librerías estándar:** `os`, `sys`.
 - **Manipulación de datos y geometrías:** `pandas`, `geopandas`, `shapely.geometry.Point`.
-- **Cálculo matricial e imágenes:** `numpy`, `scipy.ndimage.binary_dilation`, `scipy.ndimage.label`.
+- **Cálculo matricial e imágenes:** `numpy`, `scipy.ndimage.binary_dilation`.
 - **Visualización:** `matplotlib.pyplot`.
 
 ---
@@ -68,12 +68,10 @@ $$c_i = \left\lfloor \frac{\text{lon}_i - \text{LON\_MIN}}{\text{LON\_MAX} - \te
 Ambos índices se truncan con `np.clip` al rango $[0, N-1]$.
 
 ### 2. Dilatación Morfológica Física Calibrada (T1.1):
-Para representar físicamente el radio de dispersión térmica y salto de pavesas (*fire spotting*) entre frentes cercanos, se aplica una dilatación binaria iterativa con un elemento estructurante de vecindad $3 \times 3$ acotada a **2 iteraciones** (`ITERACIONES_DILATACION = 2`):
+Para representar físicamente el radio de dispersión térmica y salto de pavesas primarias (*short-range spotting*) entre frentes cercanos, se aplica una dilatación binaria iterativa con un elemento estructurante de vecindad $3 \times 3$ acotada a **1 iteración** (`ITERACIONES_DILATACION = 1`):
 $$A \oplus B = \bigcup_{b \in B} A_b$$
-Esto genera un radio de influencia de $\approx 3.1\text{ km}$, evitando la fusión irreal de focos distantes que causaba la dilatación previa de 11 iteraciones.
+Esto genera un radio de influencia de $\approx 1.57\text{ km}$ (cruz simétrica de 5 celdas por foco), evitando sobredimensionar artificialmente el área de quema o puentear canales hídricos de la capa de biomasa de Corrientes.
 
-### 3. Filtrado Multicluster por Masa Crítica (T1.2):
-Se utiliza la función `scipy.ndimage.label` con conectividad de 8 vecinos para segmentar los clusters de fuego en islas independientes. En lugar de descartar todos los componentes secundarios excepto el mayor (`argmax`), se preservan **todos los clusters** cuya cardinalidad supere un umbral de masa crítica ($k \ge 3$ celdas):
-$$C_{\text{válidos}} = \{ C_i \mid |C_i| \ge \text{UMBRAL\_MIN\_CELDAS\_CLUSTER} \}$$
-Esto elimina falsas alarmas y reflejos térmicos de 1 o 2 píxeles sin recortar los frentes de fuego activos distribuidos en toda la provincia. En caso de que ningún cluster supere el umbral, un mecanismo de reserva defensivo preserva el cluster mayor disponible.
+### 3. Preservación Integral Multi-Cluster (T1.2):
+Se erradicó la antigua limitación del cluster único (`argmax`) que borraba frentes activos en otras regiones de la provincia. Asimismo, tras comprobarse que todo punto dilatado supera las 5 celdas (lo que volvía redundante cualquier corte de masa crítica conexa post-dilatación), la matriz dilatada se adopta directamente como verdad de terreno, garantizando que el **100% de las observaciones satelitales validadas por la NASA** estén disponibles para la optimización inversa y la proyección predictiva.
 

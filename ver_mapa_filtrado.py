@@ -3,7 +3,7 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
 import numpy as np
-from scipy.ndimage import binary_dilation, label
+from scipy.ndimage import binary_dilation
 
 import os
 
@@ -11,9 +11,8 @@ import os
 LAT_MIN, LAT_MAX = -30.8, -27.2
 LON_MIN, LON_MAX = -59.8, -55.6
 
-# Parámetros físicos de filtrado y resolución espacial
-ITERACIONES_DILATACION = 2       # Radio físico de pavesas y resolución del sensor (~3.1 km)
-UMBRAL_MIN_CELDAS_CLUSTER = 3    # Masa crítica para filtrar ruido instrumental VIIRS
+# Parámetros físicos de dilatación y resolución espacial
+ITERACIONES_DILATACION = 1       # Radio físico de transporte de pavesas (~1.6 km / 1 celda de grilla)
 
 # Directorios de almacenamiento estructurado
 DIR_OUTPUT = 'output'
@@ -79,35 +78,19 @@ def procesar_una_fecha(fecha, df_fuente=None, verbose=True):
     os.makedirs(DIR_SILUETAS, exist_ok=True)
     np.save(os.path.join(DIR_NPY, f'matriz_fractal_recorte_{fecha}.npy'), matriz_binaria)
     
-    # Filtro morfológico de dilatación física controlada
+    # Filtro morfológico de dilatación física controlada (r ~ 1.6 km / 1 celda de grilla)
     matriz_continua = binary_dilation(matriz_binaria, iterations=ITERACIONES_DILATACION).astype(int)
     np.save(os.path.join(DIR_NPY, f'matriz_fractal_recorte_continua_{fecha}.npy'), matriz_continua)
     
-    # Componentes conectados (filtrado por masa crítica multicluster)
-    estructura_vecindad = np.ones((3, 3))
-    matrices_etiquetadas, num_features = label(matriz_continua, structure=estructura_vecindad)
-    tamano_componentes = np.bincount(matrices_etiquetadas.ravel())
-    
-    if len(tamano_componentes) > 1:
-        # Conservar todos los clusters que superan la masa crítica mínima (descartando ruido aislado)
-        ids_validos = np.where(tamano_componentes >= UMBRAL_MIN_CELDAS_CLUSTER)[0]
-        ids_validos = ids_validos[ids_validos != 0]  # Excluir etiqueta de fondo (0)
-        
-        # Fallback defensivo: si ningún cluster supera el umbral, conservar el mayor disponible
-        if len(ids_validos) == 0:
-            ids_validos = [np.argmax(tamano_componentes[1:]) + 1]
-            
-        matriz_limpia = np.isin(matrices_etiquetadas, ids_validos).astype(int)
-    else:
-        matriz_limpia = matriz_continua
-        
+    # La matriz continua dilatada físicamente preserva el 100% de los focos reales observados
+    matriz_limpia = matriz_continua
     nombre_matriz_limpia_npy = os.path.join(DIR_NPY, f'matriz_objetivo_limpia_{fecha}.npy')
     np.save(nombre_matriz_limpia_npy, matriz_limpia)
     
     # Renderizar y guardar siluetas en output/siluetas/
     plt.figure(figsize=(6,6))
     plt.imshow(matriz_limpia, cmap='binary', origin='lower')
-    plt.title(f"Frentes Activos Filtrados por Masa Crítica ({fecha})")
+    plt.title(f"Frentes Activos Dilatación Física (r ~ 1.6 km) ({fecha})")
     plt.xlabel("Índice X")
     plt.ylabel("Índice Y")
     ruta_silueta = os.path.join(DIR_SILUETAS, f'silueta_fractal_limpia_{fecha}.png')

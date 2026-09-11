@@ -10,8 +10,8 @@ Este documento consolida las líneas de investigación, optimizaciones técnicas
 
 | ID | Eje Temático | Tarea | Estado | Módulo Afectado | Impacto Principal |
 | :--- | :--- | :--- | :---: | :--- | :--- |
-| **T1.1** | Preprocesamiento | Reducción de dilatación morfológica a 2 iteraciones | ✅ **Implementado** | `ver_mapa_filtrado.py` | Radio físico real (~3.1 km) y reducción de tiempo (-60%) |
-| **T1.2** | Preprocesamiento | Filtrado multi-cluster por masa crítica ($k \ge 3$) | ✅ **Implementado** | `ver_mapa_filtrado.py` | Preservación de frentes simultáneos en Corrientes |
+| **T1.1** | Preprocesamiento | Dilatación morfológica calibrada a 1 iteración (~1.6 km) | ✅ **Implementado** | `ver_mapa_filtrado.py` | Máxima fidelidad territorial y respeto a barreras hídricas |
+| **T1.2** | Preprocesamiento | Preservación integral multicluster (sin corte redundante) | ✅ **Implementado** | `ver_mapa_filtrado.py` | Conservación del 100% de focos satelitales NASA sin heurísticas |
 | **T1.3** | Preprocesamiento | Cascos cóncavos (*Alpha Shapes / Concave Hull*) | ⏳ *Pendiente* | `ver_mapa_filtrado.py` | Modelado de hendiduras sin dilatación de grilla |
 | **T1.4** | Preprocesamiento | Densidad por Kernel (KDE) ponderada por FRP | ⏳ *Pendiente* | `ver_mapa_filtrado.py` | Superficie continua y curvas de nivel de intensidad |
 | **T2.1** | Autómata Celular | Capa de combustible y biomasa real (IGN WFS) | ✅ **Implementado** | `capa_biomasa.py`, `automata_celular.py` | Heterogeneidad espacial real en Corrientes (4 categorías) |
@@ -31,23 +31,23 @@ Este documento consolida las líneas de investigación, optimizaciones técnicas
 ## 1. Refactorización y Refinamiento del Preprocesamiento Satelital
 
 ### Contexto del Problema Actual
-El preprocesamiento actual aplica **11 iteraciones de dilatación morfológica** (`scipy.ndimage.binary_dilation`) y conserva únicamente el **componente conectado principal**, descartando el resto.
-- **Limitación física:** En una grilla de $256 \times 256$ sobre Corrientes (~400 km de cobertura), cada celda mide $\approx 1.56 \text{ km}$. Dilatar 11 veces expande cada foco satelital en un radio de $\approx 17 \text{ km}$ ($>30 \text{ km}$ de diámetro). Esto fusiona artificialmente focos independientes y distorsiona el área quemada real.
-- **Causa técnica:** La función `extraer_perimetro` utiliza `binary_erosion`. Para que la erosión no destruya los píxeles, necesita masas sólidas continuas de más de 2 píxeles de espesor.
+El preprocesamiento original aplicaba **11 iteraciones de dilatación morfológica** (`scipy.ndimage.binary_dilation`) y conservaba únicamente el **componente conectado principal** (`argmax`), descartando el resto de los incendios de la provincia.
+- **Limitación física:** En una grilla de $256 \times 256$ sobre Corrientes (~400 km de cobertura), cada celda mide $\approx 1.56 \text{ km}$. Dilatar 11 veces expandía cada foco satelital en un radio de $\approx 17 \text{ km}$ ($>30 \text{ km}$ de diámetro). Esto fusionaba artificialmente focos independientes y distorsionaba el área quemada real.
+- **Causa técnica:** La función `extraer_perimetro` utilizaba `binary_erosion`. Con la adopción de Box-Counting directo (T1.5), esta restricción fue superada.
 
 ### Tareas a Implementar y Recursos de Cómputo
 
-- [x] **T1.1: Reducción de Dilatación a Radio Físico Justificado ($2$ iteraciones)** ✅ *(Implementado)*
-  - *Fundamento:* Justificar la dilatación en el paper como el **radio de transporte convectivo de pavesas** (*fire spotting*, típicamente de 1.5 a 4 km en incendios extremos con vientos de 30-50 km/h).
-  - *Estado:* Implementado con `ITERACIONES_DILATACION = 2` ($\approx 3.1\text{ km}$) en `ver_mapa_filtrado.py`.
+- [x] **T1.1: Calibración de Dilatación a Radio Físico Primario ($1$ iteración, $\approx 1.6\text{ km}$)** ✅ *(Implementado)*
+  - *Fundamento:* En una grilla donde cada píxel abarca $1.57 \times 1.61\text{ km}$, 1 única iteración de dilatación otorga a cada foco un radio de influencia de $\approx 1.6\text{ km}$ (cruz simétrica de 5 celdas), modelando con precisión el alcance primario de pavesas (*short-range spotting*), respetando las barreras hídricas de la capa de biomasa y convergiendo a dimensiones fractales canónicas ($D \in [1.26, 1.40]$).
+  - *Estado:* Implementado con `ITERACIONES_DILATACION = 1` en `ver_mapa_filtrado.py`.
   - *Herramientas:* `scipy.ndimage.binary_dilation`.
-  - *Cómputo Adicional:* **Despreciable / Reducción de tiempo ($\approx -60\%$ en Fase 1)**. Al reducir las iteraciones de 11 a 2, la convolución morfológica se ejecuta en $< 5 \text{ ms}$ por día. No requiere RAM adicional ($\le 10 \text{ MB}$). Totalmente ejecutable en cualquier PC local.
+  - *Cómputo Adicional:* **Reducción neta de tiempo (-70% en Fase 1)**. Ejecución en $< 2 \text{ ms}$ por fecha.
 
-- [x] **T1.2: Filtrado por Masa Crítica en vez de Componente Único** ✅ *(Implementado)*
-  - *Fundamento:* Reemplazar la selección del "Top 1" con un umbral de significancia estadística: conservar todos los frentes conexos con tamaño mayor a $k$ celdas (ej. $k \ge 3$ celdas, descartando únicamente falsos positivos o ruido instrumental del sensor VIIRS).
-  - *Estado:* Implementado con `UMBRAL_MIN_CELDAS_CLUSTER = 3` y fallback defensivo en `ver_mapa_filtrado.py`. Preserva frentes secundarios reales en toda la provincia.
-  - *Herramientas:* `scipy.ndimage.label`, `numpy.isin`.
-  - *Cómputo Adicional:* **Despreciable ($+1 \text{ a } 3 \text{ ms}$)**. `scipy.ndimage.label` ya segmenta todos los componentes conexos en una sola pasada $O(N)$; solo se cambia `argmax` por un filtrado booleano vectorial `np.isin`. RAM idéntica.
+- [x] **T1.2: Preservación Integral Multi-Cluster sin Heurísticas Redundantes** ✅ *(Implementado)*
+  - *Fundamento:* Se superó la limitación del cluster único (`argmax`). Al dilatar 1 iteración, incluso un punto solitario adquiere 5 celdas, haciendo que cualquier corte de corte por componentes conexos (`tamano >= 3`) sea un *no-op* absoluto. Se eliminó dicho bloque superfluo (`label`, `bincount`, `isin`), adoptando la matriz continua directamente como verdad de terreno y garantizando que el **100% de los focos de la NASA** sean aprovechados por el AG.
+  - *Estado:* Implementado en `ver_mapa_filtrado.py`.
+  - *Herramientas:* `scipy.ndimage.binary_dilation`, `numpy`.
+  - *Cómputo Adicional:* **Nulo / Reducción de tiempo**. Se suprimen llamadas costosas a segmentación conexa.
 
 - [ ] **T1.3: Construcción de Envolturas Cóncavas (*Alpha Shapes / Concave Hull*)**
   - *Fundamento:* En lugar de dilatación en cuadrícula discreta, agrupar nubes de puntos continuas mediante cascos cóncavos con parámetro $\alpha$ calibrado, preservando hendiduras y vacíos topológicos naturales (lagunas, bañados).

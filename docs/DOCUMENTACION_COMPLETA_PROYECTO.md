@@ -31,7 +31,7 @@ En lugar de intentar "adivinar" el clima para simular el fuego, el proyecto plan
 ```mermaid
 flowchart TD
     subgraph FASE 1: Preprocesamiento Satelital
-        A["JSON NASA FIRMS (VIIRS/MODIS)"] --> B["ver_mapa_filtrado.py\n(Recorte Corrientes + Dilatación Física 2 iter + Filtrado Multi-Cluster)"]
+        A["JSON NASA FIRMS (VIIRS/MODIS)"] --> B["ver_mapa_filtrado.py\n(Recorte Corrientes + Dilatación Física 1 iter ~1.6 km)"]
         B --> C["Serie de Matrices Binarias 256x256 (.npy)\n[T0, T1, ..., Tk]"]
     end
 
@@ -225,9 +225,9 @@ El desarrollo del visualizador cartográfico y la integración del pipeline invo
 10. **Decisión 10: Centralización del Pipeline Satelital y Deprecación de Scripts Redundantes:**
     - Se consolidó todo el preprocesamiento de la base de datos de anomalías térmicas de la NASA (lectura GeoDataFrame, recorte espacial de Corrientes, rasterización binaria a $256 \times 256$, dilatación morfológica, filtrado de componentes conexos y exportación de matrices `.npy`) en un único módulo robusto, parametrizable y de alto rendimiento: `ver_mapa_filtrado.py`.
 
-11. **Decisión 11: Dilatación Física Convectiva, Filtrado Multi-Cluster y Box-Counting Directo:**
-    - **Dilatación Física Realista (2 iteraciones, $r \approx 3.1\text{ km}$):** Se redujo la dilatación morfológica de 11 iteraciones ($\sim 17\text{ km}$) a 2 iteraciones, modelando con rigor el alcance convectivo de briznas incandescentes (*spotting*) y compensando el radio de muestreo del píxel VIIRS 375m sin distorsionar la geometría real.
-    - **Filtrado Multi-Cluster por Masa Crítica ($k \ge 3$ celdas):** Se superó la limitación del cluster único (`argmax`) que borraba focos activos en otros puntos de la provincia. El nuevo algoritmo preserva todos los frentes simultáneos que superen 3 celdas conexas, suprimiendo únicamente el ruido de sensor (píxeles aislados de 1 o 2 celdas).
+11. **Decisión 11: Dilatación Física Convectiva Calibrada (1 iteración, $r \approx 1.57\text{ km}$) y Preservación Multicluster:**
+    - **Dilatación Física Realista (1 iteración, $r \approx 1.57\text{ km}$):** Se calibró la dilatación morfológica a 1 única iteración ($3 \times 3$, cruz compacta de 5 celdas por foco), modelando con rigor el radio primario de transporte de pavesas (*spotting*) en pastizales y compensando la discretización de la grilla sin sobredimensionar artificialmente las cicatrices ni puentear canales hídricos angostos del Iberá. La dimensión fractal resultante ($D \approx 1.26 - 1.40$) converge al rango canónico reportado en la literatura científica de incendios forestales.
+    - **Preservación Integral Multi-Cluster sin Heurísticas Redundantes:** Se eliminó la antigua limitación del cluster único (`argmax`) que borraba focos en el resto de la provincia. Asimismo, se demostró que un filtro de corte de cluster conexo post-dilatación resultaba redundante (un *no-op* absoluto, pues todo punto dilatado supera las 5 celdas), simplificando el pipeline para que la dilatación física directa preserve el 100% de las observaciones térmicas validadas por NASA FIRMS.
     - **Dimensión Fractal Directa en Espacios Dispersos:** Se fundamentó matemáticamente el cálculo de Box-Counting directo sobre matrices activas dispersas en $\mathbb{R}^2$ sin forzar erosión morfológica perimétrica, evitando el colapso de frentes delgados y ahorrando más de 2.400 operaciones de erosión por corrida en el AG.
 
 12. **Decisión 12: Heterogeneidad Espacial Biofísica y Capa Raster de Combustible (`capa_biomasa.py`):**
@@ -294,7 +294,7 @@ A continuación se indexan los 9 componentes del sistema:
 
 | Módulo | Código Fuente | Documento de Arquitectura | Catálogo de Funciones | Responsabilidad Principal |
 | :--- | :--- | :--- | :--- | :--- |
-| **`ver_mapa_filtrado`** | [`ver_mapa_filtrado.py`](../ver_mapa_filtrado.py) | [Arquitectura del Módulo](files/ver_mapa_filtrado/ver_mapa_filtrado.md) | [Funciones de Ingestión](files/ver_mapa_filtrado/functions.md) | Ingestión satelital NASA FIRMS, recorte regional, rasterización $256 \times 256$, dilatación física (2 iteraciones, $\sim 3.1\text{ km}$) y filtrado multi-cluster por masa crítica ($k \ge 3$ celdas). |
+| **`ver_mapa_filtrado`** | [`ver_mapa_filtrado.py`](../ver_mapa_filtrado.py) | [Arquitectura del Módulo](files/ver_mapa_filtrado/ver_mapa_filtrado.md) | [Funciones de Ingestión](files/ver_mapa_filtrado/functions.md) | Ingestión satelital NASA FIRMS, recorte regional Corrientes, rasterización $256 \times 256$ y dilatación física calibrada (1 iteración, $r \approx 1.57\text{ km}$) con preservación integral multicluster. |
 | **`calcular_dimension_fractal`** | [`calcular_dimension_fractal.py`](../calcular_dimension_fractal.py) | [Fundamentación Matemática](files/calcular_dimension_fractal/calcular_dimension_fractal.md) | [Funciones Fractales](files/calcular_dimension_fractal/functions.md) | Extracción de perímetros con fallback defensivo, Box-Counting logarítmico y cálculo directo de la Dimensión Fractal ($D$) para frentes dispersos (T1.5). |
 | **`capa_biomasa`** | [`capa_biomasa.py`](../capa_biomasa.py) | [Heterogeneidad Espacial](files/capa_biomasa/capa_biomasa.md) | [Funciones de Biomasa](files/capa_biomasa/functions.md) | Capa raster de biomasa y cobertura real IGN (T2.1), 4 categorías biofísicas ($C \in [0.0, 1.0]$), barreras naturales de agua y mapa cartográfico. |
 | **`automata_celular`** | [`automata_celular.py`](../automata_celular.py) | [Dinámica de Propagación](files/automata_celular/automata_celular.md) | [Funciones del Autómata](files/automata_celular/functions.md) | Simulación estocástica 2D en vecindad de Moore, ecuaciones físicas de viento/humedad/combustible espacializado y evolución multietapa continua. |

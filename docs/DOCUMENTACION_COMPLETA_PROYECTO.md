@@ -188,12 +188,13 @@ El desarrollo del visualizador cartográfico y la integración del pipeline invo
 5. **Decisión 5: Repositorio Ultraliviano y Carga Perezosa en `.gitignore`:**
    - Archivos vectoriales voluminosos (`departamentos_corrientes.json`, $\sim 855\text{ KB}$; `provincias_argentina.json`, $\sim 555\text{ KB}$) y matrices intermedias binarias (`.npy`) están excluidos de Git. Tanto `visualizador_corrientes.py` como `visualizador_argentina.py` descargan, optimizan y almacenan en caché local de forma transparente los recursos faltantes mediante mecanismos de resiliencia ante errores de red.
 
-6. **Decisión 6: Visualización Cartográfica Nacional Homogénea (Sin Acercamiento ni Distorsión de Enfoque):**
-   - Para mantener una estricta paridad metodológica y visual con el visualizador de Corrientes, `visualizador_argentina.py` estructura su salida estática en **tres paneles complementarios sobre el mapa completo de la República Argentina**, compartiendo todos el mismo encuadre geográfico continental ($\text{Lat } [-55.5^\circ, -21.5^\circ], \text{Lon } [-74.0^\circ, -53.0^\circ]$) y la misma escala:
-     - **Panel 1 (Foco Inicial Observado):** Muestra la República Argentina completa con el foco satelital en ámbar sobre la provincia de Corrientes.
-     - **Panel 2 (Predicción del Avance Proyectado):** Muestra el foco inicial consolidado (azul noche) y el frente de expansión futuro proyectado por el autómata celular (rojo carmesí) en el contexto nacional.
-     - **Panel 3 (Mapa de Riesgo Predictivo Integrado):** Presenta la superposición integral de focos consolidados y riesgo de avance sobre la división provincial argentina.
-   - De este modo, el usuario obtiene exactamente los mismos tres productos analíticos que en Corrientes pero a escala de todo el país, sin sesgos de zoom ni cambios de perspectiva entre paneles.
+6. **Decisión 6: Visualización Cartográfica Nacional y Provincial Homogénea en 4 Paneles Multi-Horizonte:**
+   - Tanto `visualizador_corrientes.py` como `visualizador_argentina.py` estructuran su salida estática en **cuatro paneles complementarios de alta resolución (300 DPI)**, compartiendo idéntica escala y encuadre geográfico sin distorsión de enfoque:
+     - **Panel 1 (Foco Base Observado en $T_{\text{final}}$):** Muestra el foco satelital base consolidado al final del período de observación (azul noche `#2c3e50`), sin rojo de predicción, permitiendo visualizar la cicatriz real de partida.
+     - **Panel 2 (Predicción Táctica a $+24\text{ Horas}$ / +30 ciclos):** Frente de avance táctico en ámbar (`#f39c12`) para cuadrillas y brigadistas en terreno.
+     - **Panel 3 (Predicción Preventiva a $+48\text{ Horas}$ / +60 ciclos):** Expansión preventiva en naranja (`#e67e22`) para evacuación y maquinaria pesada.
+     - **Panel 4 (Predicción Estratégica a $+72\text{ Horas}$ e Isócronas / +90 ciclos):** Expansión estratégica en rojo (`#e74c3c`) e isócronas sobre divisiones político-administrativas.
+   - De este modo, el usuario obtiene exactamente los mismos cuatro productos analíticos tanto a escala provincial como de todo el país, sin sesgos de zoom ni cambios de perspectiva entre paneles.
 
 7. **Decisión 7: Optimización y Disolución Topológica del GeoJSON Nacional:**
    - El archivo vectorial oficial de departamentos de toda la Argentina (`departamentos-argentina.json`) supera los $13.7\text{ MB}$, lo cual provocaría una severa degradación en el tiempo de apertura y renderizado web en Folium y Matplotlib.
@@ -201,6 +202,39 @@ El desarrollo del visualizador cartográfico y la integración del pipeline invo
 
 8. **Decisión 8: Rotulación Provincial Vectorial con Halo Blanco Protector (`path_effects`):**
    - Para que los nombres de las provincias se lean con máxima nitidez sin importar si se superponen con líneas de grilla o con los polígonos de las provincias vecinas, se implementó rotulación por centroides con efecto halo blanco (`pe.withStroke(linewidth=2.0, foreground='white')`), destacando a Corrientes con estrella y tipografía diferenciada.
+
+---
+
+### 3.8. Fundamentación Científica y Operativa de los Horizontes Predictivos (24h, 48h, 72h)
+
+La extensión del sistema predictivo a los tres horizontes de **$+24\text{ horas}$ (30 pasos)**, **$+48\text{ horas}$ (60 pasos)** y **$+72\text{ horas}$ (90 pasos)** responde a una fundamentación rigurosa desde la física atmosférica, la gestión de catástrofes y la metodología de publicación científica:
+
+#### 1. Comparativa de Propósitos Operativos y Niveles de Mando
+
+| Horizonte Temporal | Pasos del AC | Propósito Operativo | Nivel de Mando / Usuarios Clave | Fidelidad Física y Fenomenológica |
+| :--- | :--- | :--- | :--- | :--- |
+| **$+24\text{ Horas}$** (Día 1) | $+30$ ciclos | **Táctico Inmediato** | Brigadistas, bomberos y jefes de cuadrilla en línea de fuego | **Máxima:** La persistencia atmosférica es muy alta. Predicción del frente con alta fidelidad espacial ($\text{IoU}$ máximo). |
+| **$+48\text{ Horas}$** (Día 2) | $+60$ ciclos | **Preventivo y de Evacuación** | Defensa Civil, comités de crisis municipal, intendencias | **Media-Alta:** Ventana estándar para movilizar recursos de despliegue lento (cortafuegos con topadoras, evacuación preventiva de parajes y hacienda). |
+| **$+72\text{ Horas}$** (Día 3) | $+90$ ciclos | **Estratégico Territorial** | Ministerios provinciales/nacionales, Parques Nacionales (Iberá) | **Envolvente Probabilística:** Alerta estratégica interdepartamental y logística de refuerzos antes de cambios sinópticos de masa de aire. |
+
+#### 2. Justificación Física de la Estacionariedad y Persistencia Atmosférica
+
+En la dinámica de la capa límite atmosférica durante olas de calor y sequías críticas (como la experimentada en Corrientes bajo el fenómeno *La Niña*):
+- **Escala $\tau \le 24\text{ h}$ (Alta Estacionariedad):** Los campos de presión barométrica y los gradientes térmicos regionales presentan una correlación temporal $\rho > 0.85$. Las variables microclimáticas inferidas por el Algoritmo Genético $(\vec{\theta} = [v, \alpha, h, c])$ mantienen una validez casi estacionaria, lo que justifica la precisión determinista del frente de avance en este horizonte.
+- **Escala $24\text{ h} < \tau \le 48\text{ h}$ (Variabilidad Diurna Convectiva):** Comienzan a incidir los ciclos diurnos de temperatura y brisas locales, aunque el vector macro-dominante de advección regional permanece estable. El autómata celular captura el crecimiento perimétrico acumulado con confiabilidad para la toma de decisiones defensivas.
+- **Escala $48\text{ h} < \tau \le 72\text{ h}$ (Límite Sinóptico y Divergencia Caótica):** En escalas superiores a 3 días, la no linealidad atmosférica y el ingreso potencial de frentes fríos o perturbaciones de mesoescala introducen incertidumbre estocástica. Por ende, la predicción a 72 horas no debe interpretarse como una posición micrométrica determinista, sino como un **mapa de riesgo isócrono y envolvente de máxima expansión potencial**.
+
+#### 3. Metodología de Validación Científica para Papers (*Blind Test / Backtesting*)
+
+Para artículos en revistas científicas con referato (Q1/Q2) en el área de ciencias ambientales y computación aplicada, el esquema multi-horizonte permite implementar un riguroso protocolo de **Backtesting ciego**:
+1. **Fase de Calibración / Entrenamiento ($T_0 \to T_k$):** El Algoritmo Genético se calibra exclusivamente con las matrices satelitales observadas entre el día inicial $T_0$ y el día base $T_k$ (ej. del 16 al 18 de febrero de 2022). El optimizador infiere el mejor cromosoma microclimático $\vec{\theta}^*$.
+2. **Fase de Proyección Ciega (*Blind Prediction*):** A partir de la cicatriz satelital consolidada en $T_k$, el simulador predictivo encadena la propagación continua:
+   $$M_{\text{base}} (T_k) \xrightarrow{+30\text{ pasos}} M_{24\text{h}} \xrightarrow{+30\text{ pasos}} M_{48\text{h}} \xrightarrow{+30\text{ pasos}} M_{72\text{h}}$$
+3. **Contrastación Empírica Satelital Independiente:** Las matrices proyectadas ($M_{24\text{h}}, M_{48\text{h}}, M_{72\text{h}}$) se contrastan contra las observaciones satelitales reales de la NASA correspondientes a $T_{k+1}$, $T_{k+2}$ y $T_{k+3}$ (19, 20 y 21 de febrero), que nunca fueron mostradas al Algoritmo Genético.
+4. **Métricas Formales de Rendimiento:**
+   - **Índice de Jaccard ($\text{IoU}$):** $\text{IoU}_h = \frac{|M_h \cap M_{\text{real}, h}|}{|M_h \cup M_{\text{real}, h}|}$, evaluando el solapamiento espacial a 24h, 48h y 72h.
+   - **Error de Dimensión Fractal:** $\Delta D_h = |D_{\text{real}, h} - D_{\text{pred}, h}|$, evaluando si el autómata celular replica fielmente la textura y rugosidad perimetral del frente.
+   - **Acierto de Impacto Territorial Departamental:** Coincidencia entre el ranking de departamentos en alerta predicho por `identificar_departamentos_afectados` y los departamentos donde efectivamente se registraron nuevos focos satelitales en la realidad.
 
 ---
 
@@ -458,28 +492,28 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 ### Módulo: `simulador_predictivo.py`
 
-**Motivo del módulo:** Proyectar la propagación futura del incendio a partir de la última fecha observada y las variables deducidas por el AG, generando el mapa de riesgo predictivo.
+**Motivo del módulo:** Proyectar la propagación futura continua del incendio a partir de la cicatriz satelital consolidada en tres horizontes temporales clave (24h, 48h y 72h) utilizando las variables deducidas por el Algoritmo Genético, generando la matriz de riesgo isócrona acumulativa y orquestando la transposición cartográfica territorial.
 
 ---
 
-#### 16. `ejecutar_prediccion(datos_entrada, mejores_variables, pasos_futuros=100)`
+#### 16. `ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=30)`
 
-- **Motivo de creación:** Generar el producto final de prevención y mitigación de catástrofes: reconstruye la cicatriz acumulada a partir de las fechas satelitales, inyecta las variables microclimáticas deducidas por el Algoritmo Genético, simula la propagación hacia el futuro y exporta una imagen multipanel en alta resolución (`output/mapa_riesgo_predictivo.png`). Adicionalmente, invoca de manera automática a los módulos de transposición cartográfica: `visualizador_corrientes.py` (proyección sobre los 25 departamentos de Corrientes) y `visualizador_argentina.py` (proyección en el contexto nacional y regional de la República Argentina).
+- **Motivo de creación:** Generar el producto central de predicción operativa y mitigación de catástrofes: reconstruye la cicatriz satelital acumulada al final del período de observación (`matriz_final`), inyecta las variables microclimáticas óptimas $(\vec{\theta} = [v, \alpha, h, c])$, ejecuta la propagación encadenada continua en tres etapas ($M_{\text{base}} \xrightarrow{+30} M_{24\text{h}} \xrightarrow{+30} M_{48\text{h}} \xrightarrow{+30} M_{72\text{h}}$) y construye la matriz isócrona acumulativa (0: Intacto, 1: Foco Base Observado, 2: Avance Táctico +24h, 3: Avance Preventivo +48h, 4: Avance Estratégico +72h). Exporta la figura comparativa de 4 paneles en alta resolución (`output/mapa_riesgo_predictivo.png`) y delega la transposición espacial a `visualizador_corrientes.py` y `visualizador_argentina.py` mediante un diccionario de matrices por horizonte.
 - **Archivos donde se utiliza:**
   - Importada y utilizada en [`main.py`](../main.py).
   - Ejecutable directamente en [`simulador_predictivo.py`](../simulador_predictivo.py).
 - **Parámetros:**
-  - `datos_entrada` (_list[tuple]_ | _str_ | _np.ndarray_): Serie de fechas satelitales o matriz final.
-  - `mejores_variables` (_list[float]_): Vector `[viento_vel, viento_dir, humedad, combustible]`.
-  - `pasos_futuros` (_int, opcional_): Cantidad de pasos de simulación a proyectar en el futuro. Default: 100.
+  - `datos_entrada` (_list[tuple]_ | _str_ | _np.ndarray_): Serie temporal de fechas satelitales o matriz base.
+  - `mejores_variables` (_list[float]_): Vector microclimático óptimo `[viento_vel, viento_dir, humedad, combustible]`.
+  - `pasos_por_dia` (_int, opcional_): Pasos del autómata celular equivalentes a 1 día de propagación. Default: 30.
 - **Retorno:**
-  - (_np.ndarray 2D_): Matriz con el mapa de riesgo (0=intacto, 1=fuego satelital observado, 2=riesgo de avance proyectado).
+  - (_np.ndarray 2D_): Matriz isócrona con el mapa de riesgo acumulado codificado de 0 a 4.
 
 ---
 
 ### Módulo: `visualizador_corrientes.py`
 
-**Motivo del módulo:** Proveer las herramientas de cartografía computacional, georreferenciación y transposición espacial necesarias para proyectar las siluetas fractales y las matrices del autómata celular directamente sobre el mapa de la provincia de Corrientes, generando salidas tanto en formato estático GIS de alta resolución (PNG a 300 DPI) como en mapas web interactivos (HTML Folium) con división departamental y capas satelitales.
+**Motivo del módulo:** Proveer las herramientas de cartografía computacional, georreferenciación y transposición espacial necesarias para proyectar las siluetas fractales y las matrices del autómata celular directamente sobre el mapa de la provincia de Corrientes, generando salidas tanto en formato estático GIS de alta resolución (PNG de 4 paneles a 300 DPI) como en mapas web interactivos (HTML Folium multicapa) con división departamental y análisis desglosado por horizonte.
 
 ---
 
@@ -549,29 +583,36 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 ---
 
-#### 22. `generar_mapa_estatico_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_corrientes_prediccion.png", matriz_final=None)`
+#### 22. `generar_mapa_estatico_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=90, ruta_salida="output/mapa_corrientes_prediccion.png", matriz_final=None)`
 
-- **Motivo de creación:** Generar la pieza gráfica principal del proyecto: una figura cartográfica de 3 paneles en alta resolución (300 DPI) con la base de Corrientes:
-  1. *Foco Inicial Observado:* Foco satelital al inicio del período (`fecha_inicial`).
-  2. *Foco Final Expandido Observado:* Cicatriz consolidada y focos observados al término del período (`fecha_final`), sin colorear con rojo de predicción.
-  3. *Mapa de Riesgo Predictivo Integrado:* Foco consolidado base más el avance predictivo futuro (+N ciclos del autómata celular a partir del foco final) en rojo sobre la división departamental con halo blanco (`path_effects`).
+- **Motivo de creación:** Generar la pieza gráfica principal del proyecto: una figura cartográfica GIS de 4 paneles horizontales en alta resolución (300 DPI) sobre la provincia de Corrientes:
+  1. *Panel 1 (Foco Base Observado):* Cicatriz consolidada y focos satelitales al término del período (`fecha_final`), en azul noche (`#2c3e50`), sin rojo de predicción.
+  2. *Panel 2 (Predicción a +24 Horas):* Avance táctico (+30 ciclos) en ámbar (`#f39c12`) para cuadrillas de combate directo.
+  3. *Panel 3 (Predicción a +48 Horas):* Avance preventivo (+60 ciclos) en naranja (`#e67e22`) para evacuación y líneas de cortafuegos pesados.
+  4. *Panel 4 (Predicción a +72 Horas e Isócronas):* Avance estratégico (+90 ciclos) en rojo carmesí (`#e74c3c`) e isócronas acumuladas sobre los 25 departamentos rotulados con halo blanco protector (`path_effects`).
 - **Archivos donde se utiliza:**
   - Utilizada en `generar_mapas_corrientes` en [`visualizador_corrientes.py`](../visualizador_corrientes.py).
 - **Parámetros:**
-  - `matriz_inicial`, `matriz_futura`, `mapa_riesgo`: Matrices generadas en las fases anteriores.
+  - `matriz_inicial`, `matriz_futura` (_dict_ o _ndarray_), `mapa_riesgo`: Matrices del modelo.
   - `fecha_inicial`, `fecha_final`: Fechas de la serie temporal analizada.
   - `mejores_variables`: Cromosoma climático inferido `[v, dir, hum, comb]`.
-  - `pasos_futuros`: Ciclos temporales proyectados hacia el futuro.
+  - `pasos_futuros`: Pasos acumulados proyectados (+90).
   - `ruta_salida`: Destino del archivo PNG exportado.
-  - `matriz_final`: Matriz del foco final observado/acumulado a partir de la cual se proyecta la simulación futura.
+  - `matriz_final`: Matriz del foco final consolidado de partida.
 - **Retorno:**
-  - (_str_): Ruta absoluta/relativa del archivo guardado.
+  - (_str_): Ruta del archivo guardado.
 
 ---
 
-#### 23. `generar_mapa_interactivo_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_corrientes_interactivo.html", matriz_final=None)`
+#### 23. `generar_mapa_interactivo_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=90, ruta_salida="output/mapa_corrientes_interactivo.html", matriz_final=None)`
 
-- **Motivo de creación:** Construir un mapa web interactivo en Folium/Leaflet con capas intercambiables (Positron, OpenStreetMap, Satélite Esri World Imagery), polígonos departamentales con tooltip interactivo (nombre y cabecera), capas raster diferenciadas (foco inicial, foco final observado y avance proyectado) en Base64 y leyenda flotante con datos climáticos.
+- **Motivo de creación:** Construir un mapa web interactivo en Folium/Leaflet con capas intercambiables de mapa base (Positron, OpenStreetMap, Satélite Esri World Imagery), división departamental con tooltips informativos, y capas raster conmutables independientes en Base64 para cada horizonte temporal:
+  - 🔥 Foco Base Observado (`fecha_final`)
+  - 🟡 Predicción +24 Horas (Nivel Táctico / Día 1)
+  - 🟠 Predicción +48 Horas (Nivel Preventivo / Día 2)
+  - 🔴 Predicción +72 Horas (Nivel Estratégico / Día 3)
+  - ⚠️ Mapa de Riesgo Isócrono Acumulado (+72h)
+  Incluye MiniMapa de navegación y leyenda climatológica flotante.
 - **Archivos donde se utiliza:**
   - Utilizada en `generar_mapas_corrientes` en [`visualizador_corrientes.py`](../visualizador_corrientes.py).
 - **Parámetros:** Idem a `generar_mapa_estatico_corrientes`.
@@ -580,20 +621,20 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 ---
 
-#### 24. `generar_mapas_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, matriz_final=None)`
+#### 24. `generar_mapas_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=90, matriz_final=None)`
 
-- **Motivo de creación:** Función orquestadora central de la Fase 4. Ejecuta secuencialmente la identificación de departamentos en riesgo de avance futuro, genera el mapa estático GIS (`.png`), crea el mapa interactivo web (`.html`), imprime el reporte en consola y devuelve las rutas generadas.
+- **Motivo de creación:** Función orquestadora central de la Fase 4 para Corrientes. Ejecuta el análisis territorial de impacto desglosado por horizonte (+24h, +48h, +72h) identificando los departamentos bajo amenaza, genera el mapa estático GIS de 4 paneles (`.png`), crea el mapa interactivo web multicapa (`.html`), imprime el reporte comparativo en consola y devuelve las rutas generadas junto al desglose de impacto.
 - **Archivos donde se utiliza:**
   - Importada y llamada desde `ejecutar_prediccion` en [`simulador_predictivo.py`](../simulador_predictivo.py).
 - **Parámetros:** Mismos parámetros que las funciones cartográficas.
 - **Retorno:**
-  - (_dict_): Diccionario con rutas generadas y ranking de departamentos.
+  - (_dict_): Diccionario con rutas generadas y desglose de ranking departamental `{'24h': ..., '48h': ..., '72h': ...}`.
 
 ---
 
 ### Módulo: `visualizador_argentina.py`
 
-**Motivo del módulo:** Proveer las herramientas de transposición cartográfica y espacial para contextualizar el foco de incendio y su proyección predictiva a escala de la **República Argentina**, ofreciendo visualizaciones tanto a nivel continental nacional como con zoom regional sobre el Litoral / Mesopotamia (evaluando la proximidad y amenaza hacia provincias limítrofes como Chaco, Santa Fe, Entre Ríos y Misiones). Genera salidas en formato estático GIS (300 DPI) y web interactivo en Folium.
+**Motivo del módulo:** Proveer las herramientas de transposición cartográfica y espacial para contextualizar el foco de incendio y su proyección predictiva multi-horizonte (24h, 48h, 72h) a escala de la **República Argentina**, ofreciendo visualizaciones de 4 paneles a nivel continental nacional con encuadre completo de las 24 provincias (evaluando la proximidad territorial hacia Chaco, Santa Fe, Entre Ríos y Misiones). Genera salidas en formato estático GIS (300 DPI) y web interactivo en Folium.
 
 ---
 
@@ -622,29 +663,24 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 ---
 
-#### 27. `generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_argentina_prediccion.png", matriz_final=None)`
+#### 27. `generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=90, ruta_salida="output/mapa_argentina_prediccion.png", matriz_final=None)`
 
-- **Motivo de creación:** Generar la pieza cartográfica GIS a escala nacional en alta resolución (300 DPI) estructurada en 3 paneles que reproducen exactamente las tres etapas sobre el mapa completo de la República Argentina (sin acercamiento ni distorsión de enfoque):
-  1. *Foco Inicial Observado:* Foco satelital sobre el territorio continental argentino (`fecha_inicial`).
-  2. *Foco Final Expandido Observado:* Foco satelital consolidado al final del período (`fecha_final`), sin rojo de predicción.
-  3. *Mapa de Riesgo Predictivo Integrado:* Superposición de foco consolidado y avance futuro proyectado (+N ciclos) en rojo sobre la división provincial del país.
+- **Motivo de creación:** Generar la pieza cartográfica GIS a escala nacional en alta resolución (300 DPI) estructurada en 4 paneles análogos a los de Corrientes sobre el territorio completo de la República Argentina (sin distorsión de enfoque):
+  1. *Panel 1 (Foco Base Observado):* Foco satelital base sobre el territorio continental argentino (`fecha_final`), en azul noche, sin predicción roja.
+  2. *Panel 2 (Predicción a +24 Horas):* Avance táctico (+30 ciclos) en ámbar (`#f39c12`) en el contexto nacional.
+  3. *Panel 3 (Predicción a +48 Horas):* Avance preventivo (+60 ciclos) en naranja (`#e67e22`).
+  4. *Panel 4 (Predicción a +72 Horas e Isócronas):* Avance estratégico (+90 ciclos) en rojo carmesí (`#e74c3c`) e isócronas sobre las 24 provincias argentinas con rótulos de halo protector.
 - **Archivos donde se utiliza:**
   - Utilizada en `generar_mapas_argentina` en [`visualizador_argentina.py`](../visualizador_argentina.py).
-- **Parámetros:**
-  - `matriz_inicial`, `matriz_futura`, `mapa_riesgo`: Matrices de simulación y observación satelital.
-  - `fecha_inicial`, `fecha_final`: Fechas de la serie temporal analizada.
-  - `mejores_variables`: Cromosoma óptimo inferido por el AG.
-  - `pasos_futuros`: Pasos de simulación futura proyectados.
-  - `ruta_salida`: Ruta de exportación del archivo PNG.
-  - `matriz_final`: Matriz consolidada del foco final observado.
+- **Parámetros:** Mismos parámetros de simulación y climáticos.
 - **Retorno:**
   - (_str_): Ruta del archivo PNG generado.
 
 ---
 
-#### 28. `generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_argentina_interactivo.html", matriz_final=None)`
+#### 28. `generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=90, ruta_salida="output/mapa_argentina_interactivo.html", matriz_final=None)`
 
-- **Motivo de creación:** Construir una aplicación web interactiva en Folium a escala de la República Argentina, con capas base (CartoDB Positron, OpenStreetMap, Esri Satélite), división provincial con tooltips dinámicos, capas raster de foco inicial, foco final consolidado y avance predictivo en Base64, MiniMapa de orientación, selector de capas y leyenda flotante con las variables climáticas inferidas.
+- **Motivo de creación:** Construir una aplicación web interactiva en Folium a escala de la República Argentina, con capas base (CartoDB Positron, OpenStreetMap, Esri Satélite), división provincial con tooltips dinámicos, capas raster conmutables independientes de foco base observado y avances predictivos a +24h, +48h y +72h en Base64, MiniMapa de orientación, selector de capas y leyenda flotante con las variables climáticas inferidas.
 - **Archivos donde se utiliza:**
   - Utilizada en `generar_mapas_argentina` en [`visualizador_argentina.py`](../visualizador_argentina.py).
 - **Parámetros:** Mismos parámetros que `generar_mapa_estatico_argentina`.
@@ -653,9 +689,9 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 ---
 
-#### 29. `generar_mapas_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, matriz_final=None)`
+#### 29. `generar_mapas_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=90, matriz_final=None)`
 
-- **Motivo de creación:** Función orquestadora principal para la cartografía nacional. Ejecuta secuencialmente la generación del mapa estático GIS (`output/mapa_argentina_prediccion.png`) y del mapa web interactivo (`output/mapa_argentina_interactivo.html`), retornando un diccionario con las rutas de los productos generados.
+- **Motivo de creación:** Función orquestadora principal para la cartografía nacional. Ejecuta secuencialmente la generación del mapa estático GIS de 4 paneles (`output/mapa_argentina_prediccion.png`) y del mapa web interactivo (`output/mapa_argentina_interactivo.html`), retornando un diccionario con las rutas de los productos generados.
 - **Archivos donde se utiliza:**
   - Importada y llamada desde `ejecutar_prediccion` en [`simulador_predictivo.py`](../simulador_predictivo.py).
 - **Parámetros:** Mismos parámetros de simulación y climáticos.
@@ -672,7 +708,7 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 #### 30. `main()`
 
-- **Motivo de creación:** Punto de entrada interactivo de la aplicación para el usuario. Solicita las fechas del incendio, dispara la extracción satelital (Fase 1), la optimización inversa por AG (Fase 2), la predicción de riesgo por AC (Fase 3) y reporta las rutas de todos los mapas generados tanto para Corrientes como para la República Argentina (Fase 4).
+- **Motivo de creación:** Punto de entrada interactivo de la aplicación para el usuario. Solicita las fechas del incendio, dispara la extracción satelital (Fase 1), la optimización inversa por AG (Fase 2), la predicción de riesgo multi-horizonte (24h, 48h, 72h) por AC (Fase 3) y reporta las rutas de todos los mapas generados tanto para Corrientes como para la República Argentina (Fase 4).
 - **Archivos donde se utiliza:**
   - Punto de entrada principal en [`main.py`](../main.py).
 - **Parámetros:** Ninguno.
@@ -691,7 +727,7 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 | 5   | `calcular_box_counting`              | `calcular_dimension_fractal.py` | `matriz_perimetro`                                 | `(D, x, y, sizes, counts)` | `calcular_dimension_fractal.py`, `algoritmo_genetico.py`                  |
 | 6   | `_avanzar_pasos_AC`                  | `automata_celular.py`           | `grilla, v, dir, hum, comb, steps`                 | `np.ndarray`               | `automata_celular.py`, `algoritmo_genetico.py`                            |
 | 7   | `simular_incendio_AC`                | `automata_celular.py`           | `v, dir, hum, comb, steps, grilla_ini`             | `(grilla, matriz_binaria)` | `automata_celular.py`, `algoritmo_genetico.py`, `simulador_predictivo.py` |
-| 8   | `simular_evolucion_multietapa`       | `automata_celular.py`           | `v, dir, hum, comb, grilla_ini, pasos_dia, etapas` | `(grilla, list[matrices])` | `automata_celular.py`                                                     |
+| 8   | `simular_evolucion_multietapa`       | `automata_celular.py`           | `v, dir, hum, comb, grilla_ini, pasos_dia, etapas` | `(grilla, list[matrices])` | `automata_celular.py`, `simulador_predictivo.py`                          |
 | 9   | `cargar_datos_serie_temporal`        | `algoritmo_genetico.py`         | `entradas`                                         | `list[dict]`               | `algoritmo_genetico.py`                                                   |
 | 10  | `generar_individuo`                  | `algoritmo_genetico.py`         | Ninguno                                            | `[v, dir, hum, comb]`      | `algoritmo_genetico.py`                                                   |
 | 11  | `evaluar_fitness_multitemporal`      | `algoritmo_genetico.py`         | `individuo, datos_serie, pasos_por_dia, n_sims`    | `float` ($[0, 1]$)         | `algoritmo_genetico.py`                                                   |
@@ -699,20 +735,20 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 | 13  | `mutar`                              | `algoritmo_genetico.py`         | `individuo`                                        | `individuo`                | `algoritmo_genetico.py`                                                   |
 | 14  | `seleccion_torneo`                   | `algoritmo_genetico.py`         | `fitness_poblacion, k=3`                           | `individuo_ganador`        | `algoritmo_genetico.py`                                                   |
 | 15  | `ejecutar_algoritmo_genetico`        | `algoritmo_genetico.py`         | `entradas_matrices`                                | `mejor_individuo`          | `main.py`, `algoritmo_genetico.py`                                        |
-| 16  | `ejecutar_prediccion`                | `simulador_predictivo.py`       | `datos_entrada, variables, pasos_futuros`          | `mapa_riesgo`              | `main.py`, `simulador_predictivo.py`                                      |
+| 16  | `ejecutar_prediccion`                | `simulador_predictivo.py`       | `datos_entrada, variables, pasos_por_dia`          | `mapa_riesgo`              | `main.py`, `simulador_predictivo.py`                                      |
 | 17  | `cargar_geometria_corrientes`        | `visualizador_corrientes.py`    | Ninguno                                            | `GeoDataFrame`             | `visualizador_corrientes.py`                                              |
 | 18  | `cargar_mascara_provincia`           | `visualizador_corrientes.py`    | `tamano=256`                                       | `np.ndarray` (bool)        | `visualizador_corrientes.py`                                              |
 | 19  | `matriz_a_coordenadas`               | `visualizador_corrientes.py`    | `row, col, tamano, lat_bounds, lon_bounds`         | `(lat, lon)`               | `visualizador_corrientes.py`                                              |
 | 20  | `identificar_departamentos_afectados`| `visualizador_corrientes.py`    | `matriz_fuego, gdf_corrientes, tamano, ...`        | `list[dict]` (ranking)     | `visualizador_corrientes.py`                                              |
 | 21  | `_crear_data_uri_rgba`               | `visualizador_corrientes.py`    | `matriz, color_rgb, alfa, mascara_prov`            | `str` (Data URI Base64)    | `visualizador_corrientes.py`                                              |
-| 22  | `generar_mapa_estatico_corrientes`   | `visualizador_corrientes.py`    | `m_ini, m_fut, m_riesgo, fechas, clima, pasos`     | `str` (ruta PNG)           | `visualizador_corrientes.py`                                              |
-| 23  | `generar_mapa_interactivo_corrientes` | `visualizador_corrientes.py`    | `m_ini, m_fut, m_riesgo, fechas, clima, pasos`     | `str` (ruta HTML)          | `visualizador_corrientes.py`                                              |
-| 24  | `generar_mapas_corrientes`           | `visualizador_corrientes.py`    | `m_ini, m_fut, m_riesgo, fechas, clima, pasos`     | `dict` (rutas y ranking)   | `simulador_predictivo.py`                                                 |
+| 22  | `generar_mapa_estatico_corrientes`   | `visualizador_corrientes.py`    | `m_ini, m_fut, m_riesgo, fechas, clima, pasos, ...`| `str` (ruta PNG 4 paneles) | `visualizador_corrientes.py`                                              |
+| 23  | `generar_mapa_interactivo_corrientes` | `visualizador_corrientes.py`    | `m_ini, m_fut, m_riesgo, fechas, clima, pasos, ...`| `str` (ruta HTML Folium)   | `visualizador_corrientes.py`                                              |
+| 24  | `generar_mapas_corrientes`           | `visualizador_corrientes.py`    | `m_ini, m_fut, m_riesgo, fechas, clima, pasos, ...`| `dict` (rutas y desglose)  | `simulador_predictivo.py`                                                 |
 | 25  | `cargar_geometria_argentina`         | `visualizador_argentina.py`     | Ninguno                                            | `GeoDataFrame`             | `visualizador_argentina.py`                                               |
 | 26  | `_crear_data_uri_rgba_argentina`     | `visualizador_argentina.py`     | `matriz, color_rgb, alfa`                          | `str` (Data URI Base64)    | `visualizador_argentina.py`                                               |
-| 27  | `generar_mapa_estatico_argentina`   | `visualizador_argentina.py`     | `m_ini, m_fut, m_riesgo, fechas, clima, pasos`     | `str` (ruta PNG)           | `visualizador_argentina.py`                                               |
-| 28  | `generar_mapa_interactivo_argentina` | `visualizador_argentina.py`     | `m_ini, m_fut, m_riesgo, fechas, clima, pasos`     | `str` (ruta HTML)          | `visualizador_argentina.py`                                               |
-| 29  | `generar_mapas_argentina`            | `visualizador_argentina.py`     | `m_ini, m_fut, m_riesgo, fechas, clima, pasos`     | `dict` (rutas de mapas)    | `simulador_predictivo.py`                                                 |
+| 27  | `generar_mapa_estatico_argentina`   | `visualizador_argentina.py`     | `m_ini, m_fut, m_riesgo, fechas, clima, pasos, ...`| `str` (ruta PNG 4 paneles) | `visualizador_argentina.py`                                               |
+| 28  | `generar_mapa_interactivo_argentina` | `visualizador_argentina.py`     | `m_ini, m_fut, m_riesgo, fechas, clima, pasos, ...`| `str` (ruta HTML Folium)   | `visualizador_argentina.py`                                               |
+| 29  | `generar_mapas_argentina`            | `visualizador_argentina.py`     | `m_ini, m_fut, m_riesgo, fechas, clima, pasos, ...`| `dict` (rutas de mapas)    | `simulador_predictivo.py`                                                 |
 | 30  | `main`                               | `main.py`                       | Ninguno                                            | `None`                     | `main.py` (Entrypoint)                                                    |
 
 ---
@@ -727,11 +763,12 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
    - **Fecha Inicial:** `2022-02-17`
    - **Fecha Final:** `2022-02-19` (o presionar Enter para analizar solo el día inicial)
 3. **Archivos de salida generados en la carpeta `output/`:**
-   - **📍 `output/mapa_corrientes_prediccion.png`:** Mapa GIS de alta resolución (300 DPI) con 3 paneles comparativos que muestran el foco inicial satelital, la predicción de avance futuro y la superposición de riesgo sobre los 25 departamentos de Corrientes.
-   - **🌐 `output/mapa_corrientes_interactivo.html`:** Mapa web interactivo en Folium de Corrientes con selector de capas (CartoDB, OpenStreetMap y Satélite Esri), límites departamentales con tooltips interactivos y capas de fuego georreferenciadas autónomas.
-   - **🇦🇷 `output/mapa_argentina_prediccion.png`:** Mapa cartográfico GIS (300 DPI) con los 3 paneles análogos a Corrientes (Foco Inicial, Predicción de Avance y Mapa de Riesgo Integrado) sobre el mapa completo de la República Argentina, manteniendo la misma vista nacional sin acercamientos ni distorsiones de enfoque.
-   - **🌐 `output/mapa_argentina_interactivo.html`:** Mapa web interactivo en Folium de la República Argentina con división provincial oficial, capas satelitales, minimapa y leyenda climatológica flotante.
-   - **📊 `output/mapa_riesgo_predictivo.png`:** Matriz comparativa de riesgo del simulador.
+   - **📊 `output/mapa_riesgo_predictivo.png`:** Matriz comparativa de riesgo isócrono del simulador (4 paneles en alta resolución a 300 DPI: Foco Base Observado, Predicción +24h Táctica, Predicción +48h Preventiva y Predicción +72h Estratégica con código isócrono acumulativo).
+   - **📍 `output/mapa_corrientes_prediccion.png`:** Mapa GIS de alta resolución (300 DPI) con 4 paneles horizontales georreferenciados sobre los 25 departamentos de Corrientes, con rótulos de texto protegidos por halo blanco (`path_effects`).
+   - **🌐 `output/mapa_corrientes_interactivo.html`:** Mapa web interactivo en Folium de Corrientes con selector de capas (CartoDB Positron, OpenStreetMap y Satélite Esri World Imagery), división departamental oficial con tooltips interactivos, y capas raster conmutables independientes en Base64 para cada horizonte temporal (+24h, +48h, +72h e Isócronas).
+   - **🇦🇷 `output/mapa_argentina_prediccion.png`:** Mapa cartográfico GIS (300 DPI) con 4 paneles horizontales análogos a Corrientes sobre el territorio completo de la República Argentina, manteniendo la misma vista nacional sin distorsiones de escala ni encuadre.
+   - **🌐 `output/mapa_argentina_interactivo.html`:** Mapa web interactivo en Folium de la República Argentina con división provincial oficial simplificada, capas satelitales, minimapa y leyenda climatológica flotante.
    - **💾 `output/matriz_objetivo_limpia_AAAA-MM-DD.npy`:** Matrices binarias rasterizadas y filtradas de la base de la NASA.
    - **🖼️ `output/silueta_fractal_limpia_AAAA-MM-DD.png`:** Siluetas fractales continuas del cuerpo principal de fuego.
+
 

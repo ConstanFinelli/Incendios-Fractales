@@ -95,19 +95,26 @@ def _crear_data_uri_rgba_argentina(matriz, color_rgb=(231, 76, 60), alfa=220):
 
 def generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
                                     fecha_inicial="T0", fecha_final="T_final",
-                                    mejores_variables=None, pasos_futuros=100,
+                                    mejores_variables=None, pasos_futuros=90,
                                     ruta_salida="output/mapa_argentina_prediccion.png",
                                     matriz_final=None):
     """
     Genera un mapa cartográfico GIS de alta resolución (300 DPI) para la República Argentina
-    estructurado en 3 paneles análogos a los de Corrientes, manteniendo la misma vista nacional
-    completa sin acercamiento ni cambio de enfoque:
-      Panel 1: Foco Inicial Observado en la República Argentina (fecha_inicial)
-      Panel 2: Foco Final Expandido Observado en Corrientes (fecha_final, sin rojo de predicción)
-      Panel 3: Mapa de Riesgo Predictivo Integrado (+N ciclos a partir del foco final)
+    estructurado en 4 paneles análogos a los de Corrientes a escala nacional completa:
+      Panel 1: Foco Base Observado en la República Argentina (fecha_final, sin rojo de predicción)
+      Panel 2: Predicción a +24 Horas (+30 ciclos | Nivel Táctico)
+      Panel 3: Predicción a +48 Horas (+60 ciclos | Nivel Preventivo)
+      Panel 4: Predicción a +72 Horas y Riesgo Isócrono (+90 ciclos | Nivel Estratégico)
     """
     if matriz_final is None:
         matriz_final = matriz_inicial
+
+    if isinstance(matriz_futura, dict):
+        m_24h = matriz_futura.get('24h', matriz_final)
+        m_48h = matriz_futura.get('48h', m_24h)
+        m_72h = matriz_futura.get('72h', m_48h)
+    else:
+        m_24h = m_48h = m_72h = matriz_futura
 
     os.makedirs(os.path.dirname(ruta_salida), exist_ok=True)
     gdf_arg = cargar_geometria_argentina()
@@ -121,21 +128,22 @@ def generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
     except Exception:
         mascara_prov = np.ones((tamano, tamano), dtype=bool)
         
-    fuego_inicial_clean = np.logical_and(matriz_inicial > 0, mascara_prov).astype(int)
-    fuego_final_clean = np.logical_and(matriz_final > 0, mascara_prov).astype(int)
-    fuego_futuro_clean = np.logical_and(matriz_futura > 0, mascara_prov).astype(int)
-    fuego_avance_clean = np.logical_and(fuego_futuro_clean > 0, fuego_final_clean == 0).astype(int)
+    fuego_base_clean = np.logical_and(matriz_final > 0, mascara_prov).astype(int)
+    fuego_24h_clean = np.logical_and(m_24h > 0, mascara_prov).astype(int)
+    fuego_48h_clean = np.logical_and(m_48h > 0, mascara_prov).astype(int)
+    fuego_72h_clean = np.logical_and(m_72h > 0, mascara_prov).astype(int)
     
-    riesgo_clean = np.zeros_like(matriz_inicial)
-    riesgo_clean[fuego_futuro_clean > 0] = 2
-    riesgo_clean[fuego_final_clean > 0] = 1
+    avance_24h_clean = np.logical_and(fuego_24h_clean > 0, fuego_base_clean == 0).astype(int)
+    avance_48h_clean = np.logical_and(fuego_48h_clean > 0, fuego_24h_clean == 0).astype(int)
+    avance_72h_clean = np.logical_and(fuego_72h_clean > 0, fuego_48h_clean == 0).astype(int)
     
-    # Colores armónicos idénticos a los de Corrientes
-    color_foco_inicial = '#d35400'     # Ámbar intenso
-    color_avance_rojo = '#e74c3c'      # Rojo carmesí alerta
-    color_foco_base = '#2c3e50'        # Azul noche/carbón consolidado
+    # Colores isócronos idénticos a los de Corrientes
+    color_foco_base = '#2c3e50'    # Azul noche/carbón consolidado
+    color_tac_24h = '#f39c12'      # Ámbar/dorado táctico
+    color_prev_48h = '#e67e22'     # Naranja preventivo
+    color_est_72h = '#e74c3c'      # Rojo carmesí estratégico
     
-    fig, axes = plt.subplots(1, 3, figsize=(21, 10.5), dpi=300)
+    fig, axes = plt.subplots(1, 4, figsize=(28, 10.5), dpi=300)
     
     subtitulo_clima = ""
     if mejores_variables is not None:
@@ -154,7 +162,7 @@ def generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
     if gdf_arg is not None:
         gdf_corrientes = gdf_arg[gdf_arg['provincia'] == 'CORRIENTES']
         
-    # Renderizar mapa base de Argentina en los 3 paneles (mismo encuadre nacional completo)
+    # Renderizar mapa base de Argentina en los 4 paneles (mismo encuadre nacional completo)
     for ax in axes:
         if gdf_arg is not None:
             gdf_arg.plot(ax=ax, color='#f7f9fa', edgecolor='#bdc3c7', linewidth=0.7, zorder=1)
@@ -168,11 +176,11 @@ def generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
                     if ARG_LAT_MIN <= centroid.y <= ARG_LAT_MAX and ARG_LON_MIN <= centroid.x <= ARG_LON_MAX:
                         texto_label = prov_nombre.title().replace(' De ', ' de ')
                         if prov_nombre == 'CORRIENTES':
-                            ax.text(centroid.x, centroid.y, f"★ {texto_label}", fontsize=7.2,
+                            ax.text(centroid.x, centroid.y, f"★ {texto_label}", fontsize=6.8,
                                     color='#b94a00', ha='center', va='center', weight='bold', zorder=6,
                                     path_effects=[pe.withStroke(linewidth=2.5, foreground='white')])
                         else:
-                            ax.text(centroid.x, centroid.y, texto_label, fontsize=5.8,
+                            ax.text(centroid.x, centroid.y, texto_label, fontsize=5.5,
                                     color='#555555', ha='center', va='center', alpha=0.85, zorder=6,
                                     path_effects=[pe.withStroke(linewidth=2.0, foreground='white')])
                                     
@@ -185,68 +193,80 @@ def generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
         
         ax.set_xlim(ARG_LON_MIN - 0.5, ARG_LON_MAX + 0.5)
         ax.set_ylim(ARG_LAT_MIN - 0.5, ARG_LAT_MAX + 0.5)
-        ax.set_xlabel("Longitud Oeste", fontsize=9.5)
-        ax.set_ylabel("Latitud Sur", fontsize=9.5)
+        ax.set_xlabel("Longitud Oeste", fontsize=9.0)
+        ax.set_ylabel("Latitud Sur", fontsize=9.0)
         ax.grid(True, linestyle=':', alpha=0.3, color='#95a5a6', zorder=2)
         
+    p_arg = mpatches.Patch(facecolor='#f7f9fa', edgecolor='#bdc3c7', label='Territorio Nacional')
+    p_corr = mpatches.Patch(facecolor='#fff9e6', edgecolor='#d35400', label='Provincia de Corrientes (Foco)')
+    p_base = mpatches.Patch(color=color_foco_base, label=f'Foco Satelital Base ({fecha_final})')
+    p_24h = mpatches.Patch(color=color_tac_24h, label='Avance Táctico (+24h)')
+    p_48h = mpatches.Patch(color=color_prev_48h, label='Avance Preventivo (+48h)')
+    p_72h = mpatches.Patch(color=color_est_72h, label='Avance Estratégico (+72h)')
+
     # -------------------------------------------------------------
-    # PANEL 1: Foco Inicial Observado en Argentina
+    # PANEL 1: Foco Base Observado en Argentina (Sin Rojo de Predicción)
     # -------------------------------------------------------------
-    axes[0].set_title(f"1. Foco Inicial Observado\n({fecha_inicial})", fontsize=11.5, fontweight='bold', pad=10)
-    m1 = np.ma.masked_where(fuego_inicial_clean == 0, fuego_inicial_clean)
+    axes[0].set_title(f"1. Foco Base Observado en Argentina\n({fecha_final})", fontsize=11.0, fontweight='bold', pad=10)
+    m1 = np.ma.masked_where(fuego_base_clean == 0, fuego_base_clean)
     axes[0].imshow(m1, extent=extent_fuego, origin='lower',
-                   cmap=ListedColormap([color_foco_inicial]), alpha=0.95, zorder=4)
-                   
-    p_arg1 = mpatches.Patch(facecolor='#f7f9fa', edgecolor='#bdc3c7', label='Territorio Nacional')
-    p_corr1 = mpatches.Patch(facecolor='#fff9e6', edgecolor='#d35400', label='Provincia de Corrientes (Foco)')
-    p_obs = mpatches.Patch(color=color_foco_inicial, label=f'Foco Satelital Inicial ({fecha_inicial})')
-    axes[0].legend(handles=[p_arg1, p_corr1, p_obs], loc='lower left', framealpha=0.92, fontsize=8.2)
+                   cmap=ListedColormap([color_foco_base]), alpha=0.92, zorder=4)
+    axes[0].legend(handles=[p_arg, p_corr, p_base], loc='lower left', framealpha=0.92, fontsize=7.8)
     
     # -------------------------------------------------------------
-    # PANEL 2: Foco Final Expandido Observado en Argentina (Sin Rojo de Predicción)
+    # PANEL 2: Predicción a +24 Horas en Argentina (Táctico)
     # -------------------------------------------------------------
-    axes[1].set_title(f"2. Foco Final Expandido Observado\n({fecha_final})",
-                      fontsize=11.5, fontweight='bold', pad=10)
-    m2_final = np.ma.masked_where(fuego_final_clean == 0, fuego_final_clean)
-    axes[1].imshow(m2_final, extent=extent_fuego, origin='lower',
-                   cmap=ListedColormap([color_foco_base]), alpha=0.90, zorder=4)
-                   
-    p_arg2 = mpatches.Patch(facecolor='#f7f9fa', edgecolor='#bdc3c7', label='Territorio Nacional')
-    p_base = mpatches.Patch(color=color_foco_base, label=f'Foco Observado Consolidado ({fecha_final})')
-    axes[1].legend(handles=[p_arg2, p_corr1, p_base], loc='lower left', framealpha=0.92, fontsize=8.2)
+    axes[1].set_title("2. Predicción a +24 Horas\n(+30 Ciclos | Nivel Táctico)", fontsize=11.0, fontweight='bold', pad=10)
+    m2_base = np.ma.masked_where(fuego_base_clean == 0, fuego_base_clean)
+    m2_av24 = np.ma.masked_where(avance_24h_clean == 0, avance_24h_clean)
+    axes[1].imshow(m2_base, extent=extent_fuego, origin='lower',
+                   cmap=ListedColormap([color_foco_base]), alpha=0.65, zorder=3)
+    axes[1].imshow(m2_av24, extent=extent_fuego, origin='lower',
+                   cmap=ListedColormap([color_tac_24h]), alpha=0.95, zorder=4)
+    axes[1].legend(handles=[p_arg, p_base, p_24h], loc='lower left', framealpha=0.92, fontsize=7.8)
     
     # -------------------------------------------------------------
-    # PANEL 3: Mapa de Riesgo Predictivo Integrado en Argentina (+Pasos Futuros)
+    # PANEL 3: Predicción a +48 Horas en Argentina (Preventivo)
     # -------------------------------------------------------------
-    axes[2].set_title(f"3. Mapa de Riesgo Predictivo Integrado\n(+{pasos_futuros} Ciclos del Autómata Celular)",
-                      fontsize=11.5, fontweight='bold', pad=10)
+    axes[2].set_title("3. Predicción a +48 Horas\n(+60 Ciclos | Nivel Preventivo)", fontsize=11.0, fontweight='bold', pad=10)
+    m3_av48 = np.ma.masked_where(avance_48h_clean == 0, avance_48h_clean)
+    axes[2].imshow(m2_base, extent=extent_fuego, origin='lower',
+                   cmap=ListedColormap([color_foco_base]), alpha=0.65, zorder=3)
+    axes[2].imshow(m2_av24, extent=extent_fuego, origin='lower',
+                   cmap=ListedColormap([color_tac_24h]), alpha=0.85, zorder=4)
+    axes[2].imshow(m3_av48, extent=extent_fuego, origin='lower',
+                   cmap=ListedColormap([color_prev_48h]), alpha=0.95, zorder=5)
+    axes[2].legend(handles=[p_arg, p_base, p_24h, p_48h], loc='lower left', framealpha=0.92, fontsize=7.5)
     
-    m3_base = np.ma.masked_where(fuego_final_clean == 0, fuego_final_clean)
-    m3_avance = np.ma.masked_where(fuego_avance_clean == 0, fuego_avance_clean)
-    axes[2].imshow(m3_base, extent=extent_fuego, origin='lower',
-                   cmap=ListedColormap([color_foco_base]), alpha=0.70, zorder=3)
-    axes[2].imshow(m3_avance, extent=extent_fuego, origin='lower',
-                   cmap=ListedColormap([color_avance_rojo]), alpha=0.95, zorder=4)
-                   
-    p_arg3 = mpatches.Patch(facecolor='#f7f9fa', edgecolor='#bdc3c7', label='Territorio Nacional')
-    p_r1 = mpatches.Patch(color=color_foco_base, label=f'Foco Base Observado ({fecha_final})')
-    p_r2 = mpatches.Patch(color=color_avance_rojo, label=f'Riesgo de Avance Futuro (+{pasos_futuros} ciclos)')
-    axes[2].legend(handles=[p_arg3, p_r1, p_r2], loc='lower left', framealpha=0.92, fontsize=8.2)
+    # -------------------------------------------------------------
+    # PANEL 4: Predicción a +72 Horas y Riesgo Isócrono en Argentina (Estratégico)
+    # -------------------------------------------------------------
+    axes[3].set_title("4. Predicción a +72 Horas e Isócronas\n(+90 Ciclos | Nivel Estratégico)", fontsize=11.0, fontweight='bold', pad=10)
+    m4_av72 = np.ma.masked_where(avance_72h_clean == 0, avance_72h_clean)
+    axes[3].imshow(m2_base, extent=extent_fuego, origin='lower',
+                   cmap=ListedColormap([color_foco_base]), alpha=0.65, zorder=3)
+    axes[3].imshow(m2_av24, extent=extent_fuego, origin='lower',
+                   cmap=ListedColormap([color_tac_24h]), alpha=0.85, zorder=4)
+    axes[3].imshow(m3_av48, extent=extent_fuego, origin='lower',
+                   cmap=ListedColormap([color_prev_48h]), alpha=0.85, zorder=5)
+    axes[3].imshow(m4_av72, extent=extent_fuego, origin='lower',
+                   cmap=ListedColormap([color_est_72h]), alpha=0.95, zorder=6)
+    axes[3].legend(handles=[p_arg, p_base, p_24h, p_48h, p_72h], loc='lower left', framealpha=0.92, fontsize=7.2)
     
-    plt.tight_layout(rect=[0, 0, 1, 0.93])
+    plt.tight_layout(rect=[0, 0, 1, 0.94])
     plt.suptitle(
-        f"Transposición Cartográfica del Incendio en la República Argentina\n{subtitulo_clima}",
-        fontsize=14, fontweight='bold', y=0.985
+        f"Transposición Cartográfica y Modelado Predictivo Multi-Horizonte (24h, 48h, 72h) en la República Argentina\n{subtitulo_clima}",
+        fontsize=13.5, fontweight='bold', y=0.985
     )
     
     plt.savefig(ruta_salida, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f" -> [GIS Argentina] Mapa de Argentina guardado con éxito en: {ruta_salida}")
+    print(f" -> [GIS Argentina] Mapa Multi-Horizonte de Argentina guardado con éxito en: {ruta_salida}")
     return ruta_salida
 
 def generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
                                        fecha_inicial="T0", fecha_final="T_final",
-                                       mejores_variables=None, pasos_futuros=100,
+                                       mejores_variables=None, pasos_futuros=90,
                                        ruta_salida="output/mapa_argentina_interactivo.html",
                                        matriz_final=None):
     """
@@ -254,11 +274,18 @@ def generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesg
       - Centrado nacional y regional con capas base (CartoDB Positron, OpenStreetMap, Esri Satélite).
       - Capa GeoJSON vectorial con las 24 provincias de Argentina y tooltips interactivos.
       - Provincia de Corrientes destacada con contorno diferenciado.
-      - Capas raster georreferenciadas autónomas (Data URI Base64) del foco inicial, foco final y avance predictivo.
+      - Capas raster georreferenciadas autónomas (Data URI Base64) del foco base, +24h, +48h y +72h.
       - Control de capas y leyenda flotante profesional.
     """
     if matriz_final is None:
         matriz_final = matriz_inicial
+
+    if isinstance(matriz_futura, dict):
+        m_24h = matriz_futura.get('24h', matriz_final)
+        m_48h = matriz_futura.get('48h', m_24h)
+        m_72h = matriz_futura.get('72h', m_48h)
+    else:
+        m_24h = m_48h = m_72h = matriz_futura
 
     os.makedirs(os.path.dirname(ruta_salida), exist_ok=True)
     gdf_arg = cargar_geometria_argentina()
@@ -328,32 +355,44 @@ def generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesg
         ).add_to(mapa)
         
     # 3. Capas Raster Georreferenciadas Autónomas (Data URI Base64)
-    data_uri_inicial = _crear_data_uri_rgba_argentina(matriz_inicial, color_rgb=(211, 84, 0), alfa=215)
-    data_uri_final = _crear_data_uri_rgba_argentina(matriz_final, color_rgb=(44, 62, 80), alfa=205)
-    solo_avance = np.logical_and(matriz_futura > 0, matriz_final == 0).astype(int)
-    data_uri_avance = _crear_data_uri_rgba_argentina(solo_avance, color_rgb=(231, 76, 60), alfa=230)
+    data_uri_base = _crear_data_uri_rgba_argentina(matriz_final, color_rgb=(44, 62, 80), alfa=210)
+    avance_24h = np.logical_and(m_24h > 0, matriz_final == 0).astype(int)
+    avance_48h = np.logical_and(m_48h > 0, m_24h == 0).astype(int)
+    avance_72h = np.logical_and(m_72h > 0, m_48h == 0).astype(int)
+    
+    data_uri_24h = _crear_data_uri_rgba_argentina(avance_24h, color_rgb=(243, 156, 18), alfa=230)
+    data_uri_48h = _crear_data_uri_rgba_argentina(avance_48h, color_rgb=(230, 126, 34), alfa=230)
+    data_uri_72h = _crear_data_uri_rgba_argentina(avance_72h, color_rgb=(231, 76, 60), alfa=235)
     
     raster_layers.ImageOverlay(
-        image=data_uri_inicial,
+        image=data_uri_base,
         bounds=bounds_fuego,
         opacity=0.88,
-        name=f'🔥 Foco Inicial Satelital ({fecha_inicial})',
+        name=f'🔥 Foco Base Observado ({fecha_final})',
         interactive=True
     ).add_to(mapa)
     
     raster_layers.ImageOverlay(
-        image=data_uri_final,
+        image=data_uri_24h,
         bounds=bounds_fuego,
-        opacity=0.88,
-        name=f'🛰️ Foco Final Expandido ({fecha_final})',
+        opacity=0.90,
+        name='🟡 Predicción +24 Horas (Día 1 - Táctico)',
         interactive=True
     ).add_to(mapa)
     
     raster_layers.ImageOverlay(
-        image=data_uri_avance,
+        image=data_uri_48h,
+        bounds=bounds_fuego,
+        opacity=0.90,
+        name='🟠 Predicción +48 Horas (Día 2 - Preventivo)',
+        interactive=True
+    ).add_to(mapa)
+    
+    raster_layers.ImageOverlay(
+        image=data_uri_72h,
         bounds=bounds_fuego,
         opacity=0.92,
-        name=f'⚡ Predicción de Avance (+{pasos_futuros} ciclos)',
+        name='🔴 Predicción +72 Horas (Día 3 - Estratégico)',
         interactive=True
     ).add_to(mapa)
     
@@ -375,7 +414,7 @@ def generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesg
     leyenda_html = f"""
     <div style="
         position: fixed; 
-        bottom: 25px; right: 25px; width: 270px;
+        bottom: 25px; right: 25px; width: 280px;
         background-color: rgba(255, 255, 255, 0.96);
         border: 2px solid #2c3e50;
         border-radius: 8px;
@@ -386,23 +425,27 @@ def generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesg
         box-shadow: 0 4px 10px rgba(0,0,0,0.25);
     ">
         <h4 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 13px;">
-            <b>🇦🇷 Simulación Incendio - Argentina</b>
+            <b>🇦🇷 Simulación Multi-Horizonte Argentina</b>
         </h4>
         <div style="margin-bottom: 5px;">
             <span style="background: #fff9e6; border: 1.5px solid #d35400; width: 14px; height: 14px; display: inline-block; vertical-align: middle; border-radius: 2px; margin-right: 6px;"></span>
-            <b>Provincia Afectada:</b> Corrientes
-        </div>
-        <div style="margin-bottom: 5px;">
-            <span style="background: #d35400; width: 14px; height: 14px; display: inline-block; vertical-align: middle; border-radius: 2px; margin-right: 6px;"></span>
-            <b>Foco Inicial:</b> {fecha_inicial}
+            <b>Provincia:</b> Corrientes (Foco)
         </div>
         <div style="margin-bottom: 5px;">
             <span style="background: #2c3e50; width: 14px; height: 14px; display: inline-block; vertical-align: middle; border-radius: 2px; margin-right: 6px;"></span>
-            <b>Foco Final Observado:</b> {fecha_final}
+            <b>Foco Base:</b> {fecha_final}
+        </div>
+        <div style="margin-bottom: 5px;">
+            <span style="background: #f39c12; width: 14px; height: 14px; display: inline-block; vertical-align: middle; border-radius: 2px; margin-right: 6px;"></span>
+            <b>+24h:</b> Nivel Táctico (Día 1)
+        </div>
+        <div style="margin-bottom: 5px;">
+            <span style="background: #e67e22; width: 14px; height: 14px; display: inline-block; vertical-align: middle; border-radius: 2px; margin-right: 6px;"></span>
+            <b>+48h:</b> Nivel Preventivo (Día 2)
         </div>
         <div style="margin-bottom: 5px;">
             <span style="background: #e74c3c; width: 14px; height: 14px; display: inline-block; vertical-align: middle; border-radius: 2px; margin-right: 6px;"></span>
-            <b>Avance Proyectado:</b> +{pasos_futuros} ciclos
+            <b>+72h:</b> Nivel Estratégico (Día 3)
         </div>
         <div style="margin-bottom: 5px;">
             <span style="border: 1px dashed #7f8c8d; width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 6px;"></span>
@@ -419,17 +462,17 @@ def generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesg
 
 def generar_mapas_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
                             fecha_inicial="T0", fecha_final="T_final",
-                            mejores_variables=None, pasos_futuros=100,
+                            mejores_variables=None, pasos_futuros=90,
                             matriz_final=None):
     """
     Función orquestadora principal que genera tanto el mapa estático GIS como el interactivo HTML
-    para la República Argentina, ubicando la catástrofe en el contexto territorial nacional.
+    para la República Argentina con los horizontes predictivos de 24h, 48h y 72h.
     """
     if matriz_final is None:
         matriz_final = matriz_inicial
 
     print("\n" + "="*65)
-    print("TRANSPOSICIÓN ESPACIAL: PROYECTANDO FRACTALES SOBRE MAPA DE ARGENTINA")
+    print("TRANSPOSICIÓN ESPACIAL: PROYECTANDO HORIZONTES SOBRE ARGENTINA")
     print("="*65)
     print(f"Límites Nacionales: Lat [{ARG_LAT_MIN} a {ARG_LAT_MAX}] | Lon [{ARG_LON_MIN} a {ARG_LON_MAX}]")
     print(f"Ubicación del Foco (Corrientes): Lat [{LAT_MIN} a {LAT_MAX}] | Lon [{LON_MIN} a {LON_MAX}]")

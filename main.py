@@ -44,18 +44,18 @@ def main():
         print("El algoritmo genético no pudo completar la optimización.")
         sys.exit(1)
         
-    # 3. Fase Preventiva / Predictiva
-    print(f"\n[FASE 3] Simulación Predictiva y Generación de Mapa de Riesgo...")
-    ejecutar_prediccion(datos_entrada, mejores_variables, pasos_futuros=100)
+    # 3. Fase Preventiva / Predictiva Multi-Horizonte (24h, 48h, 72h)
+    print(f"\n[FASE 3] Simulación Predictiva Multi-Horizonte (24h, 48h, 72h) y Cartografía GIS...")
+    ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_POR_DIA)
     
     print("\n" + "="*65)
     print("PROCESO MULTITEMPORAL INTEGRAL FINALIZADO CON ÉXITO")
     print("Archivos cartográficos y predictivos generados en 'output/':")
-    print("  📍 output/mapa_corrientes_prediccion.png   (Mapa GIS de Corrientes)")
-    print("  🌐 output/mapa_corrientes_interactivo.html  (Mapa Web de Corrientes)")
-    print("  🇦🇷 output/mapa_argentina_prediccion.png    (Mapa GIS de Argentina)")
-    print("  🌐 output/mapa_argentina_interactivo.html   (Mapa Web de Argentina)")
-    print("  📊 output/mapa_riesgo_predictivo.png       (Matriz de riesgo comparativa)")
+    print("  📊 output/mapa_riesgo_predictivo.png       (Matriz isócrona multi-horizonte 24h, 48h, 72h)")
+    print("  📍 output/mapa_corrientes_prediccion.png   (Mapa GIS 4 paneles de Corrientes @ 300 DPI)")
+    print("  🌐 output/mapa_corrientes_interactivo.html  (Mapa Web interactivo multicapa de Corrientes)")
+    print("  🇦🇷 output/mapa_argentina_prediccion.png    (Mapa GIS 4 paneles nacional de Argentina @ 300 DPI)")
+    print("  🌐 output/mapa_argentina_interactivo.html   (Mapa Web interactivo multicapa de Argentina)")
     print("="*65)
 
 

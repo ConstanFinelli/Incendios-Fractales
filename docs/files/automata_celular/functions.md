@@ -2,6 +2,7 @@
 
 ## 1. Funciones Definidas en este Archivo
 
+<a id="_avanzar_pasos_AC"></a>
 ### `_avanzar_pasos_AC(grilla, viento_vel, viento_dir, humedad, combustible, pasos_tiempo, tamano=256)`
 - **Firma:** `def _avanzar_pasos_AC(grilla, viento_vel, viento_dir, humedad, combustible, pasos_tiempo, tamano=256):`
 - **Descripción:** Función interna de alto rendimiento encargada de iterar el autómata celular durante un número determinado de pasos discretos (`pasos_tiempo`). Calcula previamente el vector de 8 probabilidades de propagación anisotrópica para la vecindad de Moore según la velocidad y ángulo del viento. En cada ciclo temporal, localiza exclusivamente las celdas en ignición (`grilla == 1`), las extingue a cenizas (`grilla = 2`) e intenta encender a sus vecinos circundantes intactos (`grilla == 0`). Si en algún ciclo el frente se extingue por completo (`len(y_ardiendo) == 0`), corta la iteración anticipadamente.
@@ -17,6 +18,7 @@
 
 ---
 
+<a id="simular_incendio_AC"></a>
 ### `simular_incendio_AC(viento_vel, viento_dir, humedad, combustible, pasos_tiempo, tamano=256, centro_y=None, centro_x=None, grilla_inicial=None)`
 - **Firma:** `def simular_incendio_AC(viento_vel, viento_dir, humedad, combustible, pasos_tiempo, tamano=256, centro_y=None, centro_x=None, grilla_inicial=None):`
 - **Descripción:** Wrapper principal para inicializar y ejecutar una simulación completa de propagación. Permite dos modalidades de arranque:
@@ -35,6 +37,7 @@
 
 ---
 
+<a id="simular_evolucion_multietapa"></a>
 ### `simular_evolucion_multietapa(viento_vel, viento_dir, humedad, combustible, grilla_inicial, pasos_por_dia, total_etapas, tamano=256)`
 - **Firma:** `def simular_evolucion_multietapa(viento_vel, viento_dir, humedad, combustible, grilla_inicial, pasos_por_dia, total_etapas, tamano=256):`
 - **Descripción:** Ejecuta una simulación temporal continua encadenada a lo largo de múltiples etapas sucesivas (por ejemplo, 3 etapas de 24 horas cada una para proyectar +24h, +48h y +72h). En cada etapa, avanza el autómata celular `pasos_por_dia` pasos acumulativos a partir del estado terminal de la etapa previa, capturando una instantánea binaria consolidada al finalizar cada período.

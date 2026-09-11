@@ -2,6 +2,7 @@
 
 ## 1. Funciones Definidas en este Archivo
 
+<a id="cargar_datos_serie_temporal"></a>
 ### `cargar_datos_serie_temporal(entradas)`
 - **Firma:** `def cargar_datos_serie_temporal(entradas):`
 - **Descripción:** Carga desde el disco una o varias matrices satelitales (`.npy`) generadas en la Fase 1. En el caso de una serie multitemporal, va consolidando la cicatriz histórica acumulada mediante una unión lógica, extrae el perímetro morfológico del fuego y computa previamente la Dimensión Fractal real ($D_{\text{real}}$) de cada día con el algoritmo de Box-Counting.
@@ -19,6 +20,7 @@
 
 ---
 
+<a id="generar_individuo"></a>
 ### `generar_individuo()`
 - **Firma:** `def generar_individuo():`
 - **Descripción:** Instancia un cromosoma aleatorio dentro de los rangos biofísicos admisibles para el incendio:
@@ -31,6 +33,7 @@
 
 ---
 
+<a id="evaluar_fitness_multitemporal"></a>
 ### `evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES)`
 - **Firma:** `def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES):`
 - **Descripción:** Evalúa la calidad de un individuo en $num\_simulaciones$ réplicas Monte Carlo:
@@ -45,6 +48,7 @@
 
 ---
 
+<a id="_evaluar_individuo_worker"></a>
 ### `_evaluar_individuo_worker(args)`
 - **Firma:** `def _evaluar_individuo_worker(args):`
 - **Descripción:** Función auxiliar de nivel superior (top-level) diseñada para ser serializable con `pickle` bajo Windows al utilizar `ProcessPoolExecutor`. Desempaqueta la tupla de argumentos y llama a `evaluar_fitness_multitemporal`.
@@ -54,6 +58,7 @@
 
 ---
 
+<a id="cruzar"></a>
 ### `cruzar(padre1, padre2)`
 - **Firma:** `def cruzar(padre1, padre2):`
 - **Descripción:** Aplica el operador de recombinación o cruce en un punto aleatorio (`1-point crossover`) sobre los vectores cromosómicos de los progenitores.
@@ -63,6 +68,7 @@
 
 ---
 
+<a id="mutar"></a>
 ### `mutar(individuo)`
 - **Firma:** `def mutar(individuo):`
 - **Descripción:** Con probabilidad `PROB_MUTACION` ($0.2$), selecciona aleatoriamente uno de los 4 genes del cromosoma y le asigna un nuevo valor continuo dentro de su rango físico permitido.
@@ -72,6 +78,7 @@
 
 ---
 
+<a id="seleccion_torneo"></a>
 ### `seleccion_torneo(fitness_poblacion, k=3)`
 - **Firma:** `def seleccion_torneo(fitness_poblacion, k=3):`
 - **Descripción:** Selecciona aleatoriamente una muestra de $k$ individuos de la población y retorna el cromosoma que ostenta el mayor valor de fitness.
@@ -82,6 +89,7 @@
 
 ---
 
+<a id="guardar_grafico_fitness"></a>
 ### `guardar_grafico_fitness(historial, ruta_salida='output/curva_fitness.png')`
 - **Firma:** `def guardar_grafico_fitness(historial, ruta_salida='output/curva_fitness.png'):`
 - **Descripción:** Genera un gráfico de líneas a 300 DPI que ilustra la curva de aprendizaje evolutivo a lo largo de las generaciones, comparando el mejor fitness de cada generación contra el promedio de la población.
@@ -92,6 +100,7 @@
 
 ---
 
+<a id="guardar_csv_resultados"></a>
 ### `guardar_csv_resultados(historial, mejor_individuo, mejor_fitness)`
 - **Firma:** `def guardar_csv_resultados(historial, mejor_individuo, mejor_fitness):`
 - **Descripción:** Exporta dos archivos CSV estructurados:
@@ -105,6 +114,7 @@
 
 ---
 
+<a id="ejecutar_algoritmo_genetico"></a>
 ### `ejecutar_algoritmo_genetico(entradas_matrices)`
 - **Firma:** `def ejecutar_algoritmo_genetico(entradas_matrices):`
 - **Descripción:** Función orquestadora de la Fase 2. Inicializa el pool de procesos con `ProcessPoolExecutor` aprovechando todos los núcleos CPU disponibles ($N-1$), inicializa la población aleatoria y ejecuta el bucle de $40$ generaciones. En cada generación evalúa en paralelo, aplica elitismo (top 2), realiza selección por torneo, cruce y mutación. Al concluir, exporta los reportes CSV y gráficos, retornando el mejor vector climático hallado.

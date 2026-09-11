@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from automata_celular import simular_evolucion_multietapa
+from capa_biomasa import obtener_mapa_combustible, generar_mapa_cobertura_grafico
 from matplotlib.colors import ListedColormap
 import os
 
@@ -15,6 +16,7 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
       - 48 horas (+60 pasos | Nivel Preventivo: evacuación y cortafuegos pesados)
       - 72 horas (+90 pasos | Nivel Estratégico: gestión territorial y reservas)
     Genera un mapa de riesgo isócrono acumulativo y orquesta la transposición espacial.
+    Incorpora la capa raster de cobertura de suelo y biomasa real de Corrientes (Tarea T2.1).
     """
     viento_vel, viento_dir, humedad, combustible = mejores_variables
     
@@ -25,7 +27,6 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
         matriz_inicial = np.load(ruta_inicial)
         # El punto de partida de la predicción es el foco activo del último día observado
         matriz_final = np.load(ruta_final)
-            
         modo_multitemporal = len(datos_entrada) > 1
     elif isinstance(datos_entrada, np.ndarray):
         matriz_inicial = datos_entrada
@@ -51,9 +52,12 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
     print(f"Horizontes de Simulación: +24h ({pasos_por_dia} ciclos) | +48h ({pasos_por_dia*2} ciclos) | +72h ({pasos_por_dia*3} ciclos)")
     print(f"Condiciones Microclimáticas Inferidas: Viento {viento_vel:.1f}km/h @ {viento_dir:.1f}° | Humedad {humedad:.1f}% | Comb {combustible:.2f}")
     
+    # Cargar mapa de combustible biofísico heterogéneo (Tarea T2.1)
+    mapa_combustible = obtener_mapa_combustible(tamano)
+    
     # Simulación encadenada continua en 3 etapas sucesivas de 24 horas cada una:
     # M_base -> (+30) -> M_24h -> (+30) -> M_48h -> (+30) -> M_72h
-    print("\nEjecutando propagación continua multietapa...")
+    print("\nEjecutando propagación continua multietapa con heterogeneidad de biomasa...")
     grilla_72h, instantaneas_binarias = simular_evolucion_multietapa(
         viento_vel=viento_vel,
         viento_dir=viento_dir,
@@ -62,7 +66,8 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
         grilla_inicial=matriz_final,
         pasos_por_dia=pasos_por_dia,
         total_etapas=3,
-        tamano=tamano
+        tamano=tamano,
+        mapa_combustible=mapa_combustible
     )
     
     matriz_24h = instantaneas_binarias[0]
@@ -189,6 +194,12 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
         import traceback
         traceback.print_exc()
         print(f"Advertencia al proyectar mapa de Argentina: {e}")
+        
+    # Generar visualización del mapa de cobertura y combustible biofísico (Tarea T2.1)
+    try:
+        generar_mapa_cobertura_grafico(tamano)
+    except Exception as e:
+        print(f"Advertencia al generar mapa de biomasa: {e}")
         
     return mapa_riesgo
 

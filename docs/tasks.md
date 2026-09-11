@@ -38,7 +38,7 @@ El simulador asume actualmente:
 3. Viento constante y estático a lo largo de toda la corrida.
 
 ### Tareas a Implementar
-- [ ] **T2.1: Capa Raster de Cobertura de Suelo y Biomasa Real (Heterogeneidad Espacial)**
+- [x] **T2.1: Capa Raster de Cobertura de Suelo y Biomasa Real (Heterogeneidad Espacial)** (Completado)
   - *Fundamento:* En Corrientes coexisten pastizales secos, bosques implantados de pino/eucalipto (altamente combustibles), monte nativo y esteros inundables (resistencia infinita al avance).
   - *Dataset abierto:* **MapBiomas Chaco / Argentina** o **ESA WorldCover 10m**.
   - *Implementación:* Rasterizar la cobertura a $256 \times 256$ clasificando en 4 categorías:

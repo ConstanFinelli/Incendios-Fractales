@@ -77,11 +77,12 @@ def generar_individuo():
         random.uniform(0.1, 1.0)   # combustible (índice 0-1)
     ]
 
-def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES):
+def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES, mapa_combustible=None):
     """
-    Evalúa el fitness del individuo a lo largo de la evolución temporal del incendio.
+    Evalúa la aptitud de un individuo contra la serie temporal satelital real.
+    Incorpora la capa raster de cobertura de suelo y biomasa real (Tarea T2.1).
     
-    Si hay múltiples días (T0, T1, ... Tk):
+    Lógica de evaluación:
       1. Inicializa el AC con el fuego del Día 0 (T0).
       2. Para cada transición (T0->T1, T1->T2, ...), avanza 'pasos_por_dia' pasos en el AC.
       3. Evalúa la concordancia (Fractal + IoU) contra la foto satelital real de cada día.
@@ -107,7 +108,7 @@ def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_PO
         for _ in range(num_simulaciones):
             _, matriz_binaria = simular_incendio_AC(
                 viento_vel=viento_vel, viento_dir=viento_dir, humedad=humedad, combustible=combustible,
-                pasos_tiempo=100, centro_y=cy, centro_x=cx
+                pasos_tiempo=100, centro_y=cy, centro_x=cx, mapa_combustible=mapa_combustible
             )
             perimetro = extraer_perimetro(matriz_binaria)
             try:
@@ -139,14 +140,15 @@ def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_PO
             matriz_real_t = datos_serie[t]['matriz']
             D_objetivo_t = datos_serie[t]['dimension_fractal']
             
-            # Avanzar la simulación continua 'pasos_por_dia' pasos
+            # Avanzar la simulación continua 'pasos_por_dia' pasos con heterogeneidad de biomasa
             grilla_sim = _avanzar_pasos_AC(
                 grilla_sim, 
                 viento_vel=viento_vel, 
                 viento_dir=viento_dir, 
                 humedad=humedad, 
                 combustible=combustible, 
-                pasos_tiempo=pasos_por_dia
+                pasos_tiempo=pasos_por_dia,
+                mapa_combustible=mapa_combustible
             )
             
             matriz_binaria_sim = np.where(grilla_sim > 0, 1, 0)
@@ -175,13 +177,19 @@ def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_PO
     return suma_fitness_runs / num_simulaciones
 
 def _evaluar_individuo_worker(args):
-    """Función de nivel superior para ejecución limpia y sin problemas de serialización en Windows."""
-    individuo, datos_serie, pasos_por_dia, num_simulaciones = args
+    """Función de nivel superior para ejecución limpia y sin problemas de serialización en Windows y Mac."""
+    if len(args) == 5:
+        individuo, datos_serie, pasos_por_dia, num_simulaciones, mapa_combustible = args
+    else:
+        individuo, datos_serie, pasos_por_dia, num_simulaciones = args
+        mapa_combustible = None
+        
     fit = evaluar_fitness_multitemporal(
         individuo=individuo,
         datos_serie=datos_serie,
         pasos_por_dia=pasos_por_dia,
-        num_simulaciones=num_simulaciones
+        num_simulaciones=num_simulaciones,
+        mapa_combustible=mapa_combustible
     )
     return (individuo, fit)
 
@@ -291,7 +299,14 @@ def ejecutar_algoritmo_genetico(entradas_matrices):
     if len(datos_serie) > 1:
         print(f"Se evaluarán {len(datos_serie) - 1} transiciones diarias continuas ({PASOS_POR_DIA} pasos AC cada una).")
     
-    # 2. Inicializar población
+    # 2. Inicializar población y mapa de combustible biofísico (Tarea T2.1)
+    tamano = datos_serie[0]['matriz'].shape[0] if len(datos_serie) > 0 else 256
+    try:
+        from capa_biomasa import obtener_mapa_combustible
+        mapa_combustible = obtener_mapa_combustible(tamano)
+    except Exception:
+        mapa_combustible = None
+        
     poblacion = [generar_individuo() for _ in range(TAMANO_POBLACION)]
     mejor_individuo_global = None
     mejor_fitness_global = -1.0
@@ -300,7 +315,7 @@ def ejecutar_algoritmo_genetico(entradas_matrices):
     # 3. Bucle evolutivo multinúcleo
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
         for generacion in range(GENERACIONES):
-            tareas = [(ind, datos_serie, PASOS_POR_DIA, NUM_SIMULACIONES) for ind in poblacion]
+            tareas = [(ind, datos_serie, PASOS_POR_DIA, NUM_SIMULACIONES, mapa_combustible) for ind in poblacion]
             fitness_poblacion = list(executor.map(_evaluar_individuo_worker, tareas))
             
             fitness_poblacion.sort(key=lambda x: x[1], reverse=True)

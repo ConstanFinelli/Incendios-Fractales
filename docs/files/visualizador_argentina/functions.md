@@ -2,6 +2,7 @@
 
 ## 1. Funciones Definidas en este Archivo
 
+<a id="cargar_geometria_argentina"></a>
 ### `cargar_geometria_argentina()`
 - **Firma:** `def cargar_geometria_argentina():`
 - **Descripción:** Obtiene y procesa la capa vectorial de las 24 provincias de la República Argentina. Si el GeoJSON local `data/provincias_argentina.json` ya existe, lo carga directamente. Si no existe, descarga el GeoJSON oficial de departamentos de Argentina, los disuelve por provincia con GeoPandas, aplica una simplificación topológica con tolerancia de $0.01^\circ$ para optimizar el rendimiento y almacena la capa simplificada en caché local.
@@ -10,6 +11,7 @@
 
 ---
 
+<a id="_crear_data_uri_rgba_argentina"></a>
 ### `_crear_data_uri_rgba_argentina(matriz, color_rgb=(231, 76, 60), alfa=220)`
 - **Firma:** `def _crear_data_uri_rgba_argentina(matriz, color_rgb=(231, 76, 60), alfa=220):`
 - **Descripción:** Convierte una matriz binaria de propagación ($256 \times 256$) en una imagen RGBA en memoria codificada como Data URI en base64 compatible con Folium. Aplica la máscara provincial de Corrientes para evitar desbordamientos sobre los ríos limítrofes y voltea verticalmente la matriz (`np.flipud`) para adaptar el sistema de coordenadas cartesianas al sistema geográfico WGS84 de Folium.
@@ -21,6 +23,7 @@
 
 ---
 
+<a id="generar_mapa_estatico_argentina"></a>
 ### `generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=90, ruta_salida="output/mapa_argentina_prediccion.png", matriz_final=None)`
 - **Firma:** `def generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo, ...):`
 - **Descripción:** Genera un mapa GIS de alta definición (300 DPI) estructurado en 4 paneles horizontales que representan todo el territorio continental de la República Argentina:
@@ -34,6 +37,7 @@
 
 ---
 
+<a id="generar_mapa_interactivo_argentina"></a>
 ### `generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=90, ruta_salida="output/mapa_argentina_interactivo.html", matriz_final=None)`
 - **Firma:** `def generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesgo, ...):`
 - **Descripción:** Construye una aplicación web interactiva en Folium a escala nacional con:
@@ -47,6 +51,7 @@
 
 ---
 
+<a id="generar_mapas_argentina"></a>
 ### `generar_mapas_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=90, matriz_final=None)`
 - **Firma:** `def generar_mapas_argentina(matriz_inicial, matriz_futura, mapa_riesgo, ...):`
 - **Descripción:** Función orquestadora a escala nacional. Imprime los límites geográficos en consola y coordina la ejecución de `generar_mapa_estatico_argentina` y `generar_mapa_interactivo_argentina`.

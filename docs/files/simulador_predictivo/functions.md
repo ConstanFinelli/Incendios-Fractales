@@ -2,6 +2,7 @@
 
 ## 1. Funciones Definidas en este Archivo
 
+<a id="ejecutar_prediccion"></a>
 ### `ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_POR_DIA)`
 - **Firma:** `def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_POR_DIA):`
 - **Descripción:** Función principal y orquestadora de la Fase 3:

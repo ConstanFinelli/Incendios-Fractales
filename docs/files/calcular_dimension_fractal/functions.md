@@ -2,6 +2,7 @@
 
 ## 1. Funciones Definidas en este Archivo
 
+<a id="extraer_perimetro"></a>
 ### `extraer_perimetro(matriz_binaria)`
 - **Firma:** `def extraer_perimetro(matriz_binaria):`
 - **Descripción:** Extrae la frontera exterior o contorno perimetral de una silueta de fuego binaria. Utiliza una erosión morfológica binaria que contrae la región encendida en un píxel en todas las direcciones y luego sustrae la versión erosionada de la matriz original:
@@ -12,6 +13,7 @@
 
 ---
 
+<a id="calcular_box_counting"></a>
 ### `calcular_box_counting(matriz_perimetro)`
 - **Firma:** `def calcular_box_counting(matriz_perimetro):`
 - **Descripción:** Implementa el cálculo de la dimensión fractal de Minkowski-Bouligand mediante el método de Box-Counting de alta velocidad (100% vectorizado en NumPy). Divide progresivamente el espacio en grillas cuadradas con cajas de tamaño $\epsilon = n, n/2, n/4, \dots, 1$. Para cada tamaño intermedio, efectúa una redistribución tensorial en 4 dimensiones (`reshape(n // tamano, tamano, n // tamano, tamano)`) y aplica `any(axis=(1, 3))` para determinar qué cajas intersectan el perímetro. Finalmente, calcula una regresión lineal en escala log-log mediante `numpy.polyfit(x, y, 1)`.

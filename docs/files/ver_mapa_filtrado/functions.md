@@ -2,6 +2,7 @@
 
 ## 1. Funciones Definidas en este Archivo
 
+<a id="obtener_df_completo"></a>
 ### `obtener_df_completo()`
 - **Firma:** `def obtener_df_completo():`
 - **Descripción:** Implementa un patrón de carga diferida (*lazy loading*) con caché en memoria mediante la variable global `_df_completo_cache`. Lee la base de datos completa de la NASA desde `./DL_FIRE_SV-C2_788988/fire_archive_SV-C2_788988.json`, construye objetos `shapely.geometry.Point` a partir de las coordenadas geográficas de cada registro y genera un `geopandas.GeoDataFrame` con sistema de referencia de coordenadas `EPSG:4326` (WGS84).
@@ -10,6 +11,7 @@
 
 ---
 
+<a id="procesar_una_fecha"></a>
 ### `procesar_una_fecha(fecha, df_fuente=None, verbose=True)`
 - **Firma:** `def procesar_una_fecha(fecha, df_fuente=None, verbose=True):`
 - **Descripción:** Procesa integralmente los focos satelitales de un día determinado:
@@ -29,6 +31,7 @@
 
 ---
 
+<a id="procesar_rango_fechas"></a>
 ### `procesar_rango_fechas(fecha_inicio, fecha_fin)`
 - **Firma:** `def procesar_rango_fechas(fecha_inicio, fecha_fin):`
 - **Descripción:** Automatiza el procesamiento por lotes para intervalos temporales de análisis. Carga la base satelital, extrae todas las fechas únicas disponibles comprendidas en el rango $[fecha\_inicio, fecha\_fin]$, las ordena cronológicamente y ejecuta `procesar_una_fecha` sobre cada una. Oprime y descarta automáticamente los días con cero focos en la región.
@@ -39,6 +42,7 @@
 
 ---
 
+<a id="procesar_fecha"></a>
 ### `procesar_fecha(fecha_elegida=None)`
 - **Firma:** `def procesar_fecha(fecha_elegida=None):`
 - **Descripción:** Función de conveniencia interactiva orientada a la ejecución para un único día. Si no se le provee `fecha_elegida`, lista en pantalla la distribución de focos por fecha de la base de datos y le solicita al usuario por teclado que ingrese la fecha que desea procesar. Luego delega el cómputo en `procesar_una_fecha`.

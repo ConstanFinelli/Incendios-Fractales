@@ -2,6 +2,7 @@
 
 ## 1. Funciones Definidas en este Archivo
 
+<a id="main"></a>
 ### `main()`
 - **Firma:** `def main():`
 - **Descripción:** Punto de entrada principal y orquestador del sistema. Controla secuencialmente la recepción de entradas del usuario, el preprocesamiento de datos satelitales, la optimización inversa por algoritmo genético y la simulación predictiva cartográfica.

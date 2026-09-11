@@ -549,9 +549,12 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 ---
 
-#### 22. `generar_mapa_estatico_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_corrientes_prediccion.png")`
+#### 22. `generar_mapa_estatico_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_corrientes_prediccion.png", matriz_final=None)`
 
-- **Motivo de creación:** Generar la pieza gráfica principal del proyecto: una figura cartográfica de 3 paneles en alta resolución (300 DPI) con la base de Corrientes, el foco inicial, el frente de avance futuro y el mapa de riesgo integrado, con rótulos de departamentos protegidos por halo blanco (`path_effects`).
+- **Motivo de creación:** Generar la pieza gráfica principal del proyecto: una figura cartográfica de 3 paneles en alta resolución (300 DPI) con la base de Corrientes:
+  1. *Foco Inicial Observado:* Foco satelital al inicio del período (`fecha_inicial`).
+  2. *Foco Final Expandido Observado:* Cicatriz consolidada y focos observados al término del período (`fecha_final`), sin colorear con rojo de predicción.
+  3. *Mapa de Riesgo Predictivo Integrado:* Foco consolidado base más el avance predictivo futuro (+N ciclos del autómata celular a partir del foco final) en rojo sobre la división departamental con halo blanco (`path_effects`).
 - **Archivos donde se utiliza:**
   - Utilizada en `generar_mapas_corrientes` en [`visualizador_corrientes.py`](../visualizador_corrientes.py).
 - **Parámetros:**
@@ -560,14 +563,15 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
   - `mejores_variables`: Cromosoma climático inferido `[v, dir, hum, comb]`.
   - `pasos_futuros`: Ciclos temporales proyectados hacia el futuro.
   - `ruta_salida`: Destino del archivo PNG exportado.
+  - `matriz_final`: Matriz del foco final observado/acumulado a partir de la cual se proyecta la simulación futura.
 - **Retorno:**
   - (_str_): Ruta absoluta/relativa del archivo guardado.
 
 ---
 
-#### 23. `generar_mapa_interactivo_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_corrientes_interactivo.html")`
+#### 23. `generar_mapa_interactivo_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_corrientes_interactivo.html", matriz_final=None)`
 
-- **Motivo de creación:** Construir un mapa web interactivo en Folium/Leaflet con capas intercambiables (Positron, OpenStreetMap, Satélite Esri World Imagery), polígonos departamentales con tooltip interactivo (nombre y cabecera), capas raster de fuego en Base64 y leyenda flotante con datos climáticos.
+- **Motivo de creación:** Construir un mapa web interactivo en Folium/Leaflet con capas intercambiables (Positron, OpenStreetMap, Satélite Esri World Imagery), polígonos departamentales con tooltip interactivo (nombre y cabecera), capas raster diferenciadas (foco inicial, foco final observado y avance proyectado) en Base64 y leyenda flotante con datos climáticos.
 - **Archivos donde se utiliza:**
   - Utilizada en `generar_mapas_corrientes` en [`visualizador_corrientes.py`](../visualizador_corrientes.py).
 - **Parámetros:** Idem a `generar_mapa_estatico_corrientes`.
@@ -576,14 +580,14 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 ---
 
-#### 24. `generar_mapas_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100)`
+#### 24. `generar_mapas_corrientes(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, matriz_final=None)`
 
-- **Motivo de creación:** Función orquestadora central de la Fase 4. Ejecuta secuencialmente la identificación de departamentos en riesgo, genera el mapa estático GIS (`.png`), crea el mapa interactivo web (`.html`), imprime el reporte en consola y devuelve las rutas generadas.
+- **Motivo de creación:** Función orquestadora central de la Fase 4. Ejecuta secuencialmente la identificación de departamentos en riesgo de avance futuro, genera el mapa estático GIS (`.png`), crea el mapa interactivo web (`.html`), imprime el reporte en consola y devuelve las rutas generadas.
 - **Archivos donde se utiliza:**
   - Importada y llamada desde `ejecutar_prediccion` en [`simulador_predictivo.py`](../simulador_predictivo.py).
 - **Parámetros:** Mismos parámetros que las funciones cartográficas.
 - **Retorno:**
-  - (_dict_): Diccionario con las claves: `{'mapa_estatico': str, 'mapa_interactivo': str, 'departamentos_afectados': list}`.
+  - (_dict_): Diccionario con rutas generadas y ranking de departamentos.
 
 ---
 
@@ -618,12 +622,12 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 ---
 
-#### 27. `generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_argentina_prediccion.png")`
+#### 27. `generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_argentina_prediccion.png", matriz_final=None)`
 
-- **Motivo de creación:** Generar la pieza cartográfica GIS a escala nacional en alta resolución (300 DPI) estructurada en 3 paneles que reproducen exactamente las tres etapas de Corrientes sobre el mapa completo de la República Argentina (sin acercamiento ni distorsión de enfoque):
-  1. *Foco Inicial Observado:* Foco satelital sobre el territorio continental argentino.
-  2. *Predicción del Avance Proyectado:* Foco inicial observado y frente de avance futuro proyectado (+N ciclos del autómata celular).
-  3. *Mapa de Riesgo Predictivo Integrado:* Superposición de focos consolidados y zonas de riesgo de avance sobre la división provincial del país.
+- **Motivo de creación:** Generar la pieza cartográfica GIS a escala nacional en alta resolución (300 DPI) estructurada en 3 paneles que reproducen exactamente las tres etapas sobre el mapa completo de la República Argentina (sin acercamiento ni distorsión de enfoque):
+  1. *Foco Inicial Observado:* Foco satelital sobre el territorio continental argentino (`fecha_inicial`).
+  2. *Foco Final Expandido Observado:* Foco satelital consolidado al final del período (`fecha_final`), sin rojo de predicción.
+  3. *Mapa de Riesgo Predictivo Integrado:* Superposición de foco consolidado y avance futuro proyectado (+N ciclos) en rojo sobre la división provincial del país.
 - **Archivos donde se utiliza:**
   - Utilizada en `generar_mapas_argentina` en [`visualizador_argentina.py`](../visualizador_argentina.py).
 - **Parámetros:**
@@ -632,14 +636,15 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
   - `mejores_variables`: Cromosoma óptimo inferido por el AG.
   - `pasos_futuros`: Pasos de simulación futura proyectados.
   - `ruta_salida`: Ruta de exportación del archivo PNG.
+  - `matriz_final`: Matriz consolidada del foco final observado.
 - **Retorno:**
   - (_str_): Ruta del archivo PNG generado.
 
 ---
 
-#### 28. `generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_argentina_interactivo.html")`
+#### 28. `generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, ruta_salida="output/mapa_argentina_interactivo.html", matriz_final=None)`
 
-- **Motivo de creación:** Construir una aplicación web interactiva en Folium a escala de la República Argentina, con capas base (CartoDB Positron, OpenStreetMap, Esri Satélite), división provincial con tooltips dinámicos, capas raster de fuego en Base64, MiniMapa de orientación, selector de capas y leyenda flotante con las variables climáticas inferidas.
+- **Motivo de creación:** Construir una aplicación web interactiva en Folium a escala de la República Argentina, con capas base (CartoDB Positron, OpenStreetMap, Esri Satélite), división provincial con tooltips dinámicos, capas raster de foco inicial, foco final consolidado y avance predictivo en Base64, MiniMapa de orientación, selector de capas y leyenda flotante con las variables climáticas inferidas.
 - **Archivos donde se utiliza:**
   - Utilizada en `generar_mapas_argentina` en [`visualizador_argentina.py`](../visualizador_argentina.py).
 - **Parámetros:** Mismos parámetros que `generar_mapa_estatico_argentina`.
@@ -648,7 +653,7 @@ A continuación se detallan todas las funciones del proyecto agrupadas por archi
 
 ---
 
-#### 29. `generar_mapas_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100)`
+#### 29. `generar_mapas_argentina(matriz_inicial, matriz_futura, mapa_riesgo, fecha_inicial="T0", fecha_final="T_final", mejores_variables=None, pasos_futuros=100, matriz_final=None)`
 
 - **Motivo de creación:** Función orquestadora principal para la cartografía nacional. Ejecuta secuencialmente la generación del mapa estático GIS (`output/mapa_argentina_prediccion.png`) y del mapa web interactivo (`output/mapa_argentina_interactivo.html`), retornando un diccionario con las rutas de los productos generados.
 - **Archivos donde se utiliza:**

@@ -118,6 +118,7 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_futuros=100):
         from visualizador_corrientes import generar_mapas_corrientes
         generar_mapas_corrientes(
             matriz_inicial=matriz_inicial,
+            matriz_final=matriz_final,
             matriz_futura=matriz_binaria_futura,
             mapa_riesgo=mapa_riesgo,
             fecha_inicial=fecha_inicial,
@@ -133,6 +134,7 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_futuros=100):
         from visualizador_argentina import generar_mapas_argentina
         generar_mapas_argentina(
             matriz_inicial=matriz_inicial,
+            matriz_final=matriz_final,
             matriz_futura=matriz_binaria_futura,
             mapa_riesgo=mapa_riesgo,
             fecha_inicial=fecha_inicial,

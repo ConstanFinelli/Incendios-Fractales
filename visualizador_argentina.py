@@ -96,15 +96,19 @@ def _crear_data_uri_rgba_argentina(matriz, color_rgb=(231, 76, 60), alfa=220):
 def generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
                                     fecha_inicial="T0", fecha_final="T_final",
                                     mejores_variables=None, pasos_futuros=100,
-                                    ruta_salida="output/mapa_argentina_prediccion.png"):
+                                    ruta_salida="output/mapa_argentina_prediccion.png",
+                                    matriz_final=None):
     """
     Genera un mapa cartográfico GIS de alta resolución (300 DPI) para la República Argentina
     estructurado en 3 paneles análogos a los de Corrientes, manteniendo la misma vista nacional
     completa sin acercamiento ni cambio de enfoque:
-      Panel 1: Foco Inicial Observado en la República Argentina
-      Panel 2: Predicción del Avance Proyectado (+N ciclos) en la República Argentina
-      Panel 3: Mapa de Riesgo Predictivo Integrado sobre el Territorio Nacional
+      Panel 1: Foco Inicial Observado en la República Argentina (fecha_inicial)
+      Panel 2: Foco Final Expandido Observado en Corrientes (fecha_final, sin rojo de predicción)
+      Panel 3: Mapa de Riesgo Predictivo Integrado (+N ciclos a partir del foco final)
     """
+    if matriz_final is None:
+        matriz_final = matriz_inicial
+
     os.makedirs(os.path.dirname(ruta_salida), exist_ok=True)
     gdf_arg = cargar_geometria_argentina()
     extent_fuego = [LON_MIN, LON_MAX, LAT_MIN, LAT_MAX]
@@ -118,17 +122,18 @@ def generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
         mascara_prov = np.ones((tamano, tamano), dtype=bool)
         
     fuego_inicial_clean = np.logical_and(matriz_inicial > 0, mascara_prov).astype(int)
+    fuego_final_clean = np.logical_and(matriz_final > 0, mascara_prov).astype(int)
     fuego_futuro_clean = np.logical_and(matriz_futura > 0, mascara_prov).astype(int)
-    fuego_avance_clean = np.logical_and(fuego_futuro_clean > 0, fuego_inicial_clean == 0).astype(int)
+    fuego_avance_clean = np.logical_and(fuego_futuro_clean > 0, fuego_final_clean == 0).astype(int)
     
     riesgo_clean = np.zeros_like(matriz_inicial)
     riesgo_clean[fuego_futuro_clean > 0] = 2
-    riesgo_clean[fuego_inicial_clean > 0] = 1
+    riesgo_clean[fuego_final_clean > 0] = 1
     
     # Colores armónicos idénticos a los de Corrientes
     color_foco_inicial = '#d35400'     # Ámbar intenso
     color_avance_rojo = '#e74c3c'      # Rojo carmesí alerta
-    color_foco_base = '#2c3e50'        # Azul noche/carbón
+    color_foco_base = '#2c3e50'        # Azul noche/carbón consolidado
     
     fig, axes = plt.subplots(1, 3, figsize=(21, 10.5), dpi=300)
     
@@ -194,40 +199,38 @@ def generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
                    
     p_arg1 = mpatches.Patch(facecolor='#f7f9fa', edgecolor='#bdc3c7', label='Territorio Nacional')
     p_corr1 = mpatches.Patch(facecolor='#fff9e6', edgecolor='#d35400', label='Provincia de Corrientes (Foco)')
-    p_obs = mpatches.Patch(color=color_foco_inicial, label=f'Foco Satelital Observado ({fecha_inicial})')
+    p_obs = mpatches.Patch(color=color_foco_inicial, label=f'Foco Satelital Inicial ({fecha_inicial})')
     axes[0].legend(handles=[p_arg1, p_corr1, p_obs], loc='lower left', framealpha=0.92, fontsize=8.2)
     
     # -------------------------------------------------------------
-    # PANEL 2: Predicción del Avance Proyectado en Argentina
+    # PANEL 2: Foco Final Expandido Observado en Argentina (Sin Rojo de Predicción)
     # -------------------------------------------------------------
-    axes[1].set_title(f"2. Predicción del Avance Proyectado\n(+{pasos_futuros} Ciclos del Autómata Celular)",
+    axes[1].set_title(f"2. Foco Final Expandido Observado\n({fecha_final})",
                       fontsize=11.5, fontweight='bold', pad=10)
-    m2_base = np.ma.masked_where(fuego_inicial_clean == 0, fuego_inicial_clean)
-    m2_avance = np.ma.masked_where(fuego_avance_clean == 0, fuego_avance_clean)
-    
-    axes[1].imshow(m2_base, extent=extent_fuego, origin='lower',
-                   cmap=ListedColormap([color_foco_base]), alpha=0.60, zorder=3)
-    axes[1].imshow(m2_avance, extent=extent_fuego, origin='lower',
-                   cmap=ListedColormap([color_avance_rojo]), alpha=0.95, zorder=4)
+    m2_final = np.ma.masked_where(fuego_final_clean == 0, fuego_final_clean)
+    axes[1].imshow(m2_final, extent=extent_fuego, origin='lower',
+                   cmap=ListedColormap([color_foco_base]), alpha=0.90, zorder=4)
                    
     p_arg2 = mpatches.Patch(facecolor='#f7f9fa', edgecolor='#bdc3c7', label='Territorio Nacional')
-    p_base = mpatches.Patch(color=color_foco_base, label=f'Foco Inicial Observado ({fecha_inicial})')
-    p_pred = mpatches.Patch(color=color_avance_rojo, label=f'Avance Proyectado (+{pasos_futuros} ciclos)')
-    axes[1].legend(handles=[p_arg2, p_base, p_pred], loc='lower left', framealpha=0.92, fontsize=8.2)
+    p_base = mpatches.Patch(color=color_foco_base, label=f'Foco Observado Consolidado ({fecha_final})')
+    axes[1].legend(handles=[p_arg2, p_corr1, p_base], loc='lower left', framealpha=0.92, fontsize=8.2)
     
     # -------------------------------------------------------------
-    # PANEL 3: Mapa de Riesgo Predictivo Integrado en Argentina
+    # PANEL 3: Mapa de Riesgo Predictivo Integrado en Argentina (+Pasos Futuros)
     # -------------------------------------------------------------
-    axes[2].set_title("3. Mapa de Riesgo Predictivo Integrado\n(Superposición sobre Territorio Nacional)",
+    axes[2].set_title(f"3. Mapa de Riesgo Predictivo Integrado\n(+{pasos_futuros} Ciclos del Autómata Celular)",
                       fontsize=11.5, fontweight='bold', pad=10)
-    cmap_riesgo = ListedColormap([color_foco_base, color_avance_rojo])
-    m3_riesgo = np.ma.masked_where(riesgo_clean == 0, riesgo_clean)
-    axes[2].imshow(m3_riesgo, extent=extent_fuego, origin='lower',
-                   cmap=cmap_riesgo, vmin=1, vmax=2, alpha=0.90, zorder=4)
+    
+    m3_base = np.ma.masked_where(fuego_final_clean == 0, fuego_final_clean)
+    m3_avance = np.ma.masked_where(fuego_avance_clean == 0, fuego_avance_clean)
+    axes[2].imshow(m3_base, extent=extent_fuego, origin='lower',
+                   cmap=ListedColormap([color_foco_base]), alpha=0.70, zorder=3)
+    axes[2].imshow(m3_avance, extent=extent_fuego, origin='lower',
+                   cmap=ListedColormap([color_avance_rojo]), alpha=0.95, zorder=4)
                    
     p_arg3 = mpatches.Patch(facecolor='#f7f9fa', edgecolor='#bdc3c7', label='Territorio Nacional')
-    p_r1 = mpatches.Patch(color=color_foco_base, label='Foco Consolidado')
-    p_r2 = mpatches.Patch(color=color_avance_rojo, label='Riesgo de Avance Futuro')
+    p_r1 = mpatches.Patch(color=color_foco_base, label=f'Foco Base Observado ({fecha_final})')
+    p_r2 = mpatches.Patch(color=color_avance_rojo, label=f'Riesgo de Avance Futuro (+{pasos_futuros} ciclos)')
     axes[2].legend(handles=[p_arg3, p_r1, p_r2], loc='lower left', framealpha=0.92, fontsize=8.2)
     
     plt.tight_layout(rect=[0, 0, 1, 0.93])
@@ -244,15 +247,19 @@ def generar_mapa_estatico_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
 def generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
                                        fecha_inicial="T0", fecha_final="T_final",
                                        mejores_variables=None, pasos_futuros=100,
-                                       ruta_salida="output/mapa_argentina_interactivo.html"):
+                                       ruta_salida="output/mapa_argentina_interactivo.html",
+                                       matriz_final=None):
     """
     Genera un mapa web interactivo en Folium para la República Argentina con:
       - Centrado nacional y regional con capas base (CartoDB Positron, OpenStreetMap, Esri Satélite).
       - Capa GeoJSON vectorial con las 24 provincias de Argentina y tooltips interactivos.
       - Provincia de Corrientes destacada con contorno diferenciado.
-      - Capas raster georreferenciadas autónomas (Data URI Base64) del foco inicial y avance.
+      - Capas raster georreferenciadas autónomas (Data URI Base64) del foco inicial, foco final y avance predictivo.
       - Control de capas y leyenda flotante profesional.
     """
+    if matriz_final is None:
+        matriz_final = matriz_inicial
+
     os.makedirs(os.path.dirname(ruta_salida), exist_ok=True)
     gdf_arg = cargar_geometria_argentina()
     
@@ -322,7 +329,8 @@ def generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesg
         
     # 3. Capas Raster Georreferenciadas Autónomas (Data URI Base64)
     data_uri_inicial = _crear_data_uri_rgba_argentina(matriz_inicial, color_rgb=(211, 84, 0), alfa=215)
-    solo_avance = np.logical_and(matriz_futura > 0, matriz_inicial == 0).astype(int)
+    data_uri_final = _crear_data_uri_rgba_argentina(matriz_final, color_rgb=(44, 62, 80), alfa=205)
+    solo_avance = np.logical_and(matriz_futura > 0, matriz_final == 0).astype(int)
     data_uri_avance = _crear_data_uri_rgba_argentina(solo_avance, color_rgb=(231, 76, 60), alfa=230)
     
     raster_layers.ImageOverlay(
@@ -330,6 +338,14 @@ def generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesg
         bounds=bounds_fuego,
         opacity=0.88,
         name=f'🔥 Foco Inicial Satelital ({fecha_inicial})',
+        interactive=True
+    ).add_to(mapa)
+    
+    raster_layers.ImageOverlay(
+        image=data_uri_final,
+        bounds=bounds_fuego,
+        opacity=0.88,
+        name=f'🛰️ Foco Final Expandido ({fecha_final})',
         interactive=True
     ).add_to(mapa)
     
@@ -381,6 +397,10 @@ def generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesg
             <b>Foco Inicial:</b> {fecha_inicial}
         </div>
         <div style="margin-bottom: 5px;">
+            <span style="background: #2c3e50; width: 14px; height: 14px; display: inline-block; vertical-align: middle; border-radius: 2px; margin-right: 6px;"></span>
+            <b>Foco Final Observado:</b> {fecha_final}
+        </div>
+        <div style="margin-bottom: 5px;">
             <span style="background: #e74c3c; width: 14px; height: 14px; display: inline-block; vertical-align: middle; border-radius: 2px; margin-right: 6px;"></span>
             <b>Avance Proyectado:</b> +{pasos_futuros} ciclos
         </div>
@@ -399,11 +419,15 @@ def generar_mapa_interactivo_argentina(matriz_inicial, matriz_futura, mapa_riesg
 
 def generar_mapas_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
                             fecha_inicial="T0", fecha_final="T_final",
-                            mejores_variables=None, pasos_futuros=100):
+                            mejores_variables=None, pasos_futuros=100,
+                            matriz_final=None):
     """
     Función orquestadora principal que genera tanto el mapa estático GIS como el interactivo HTML
     para la República Argentina, ubicando la catástrofe en el contexto territorial nacional.
     """
+    if matriz_final is None:
+        matriz_final = matriz_inicial
+
     print("\n" + "="*65)
     print("TRANSPOSICIÓN ESPACIAL: PROYECTANDO FRACTALES SOBRE MAPA DE ARGENTINA")
     print("="*65)
@@ -412,6 +436,7 @@ def generar_mapas_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
     
     ruta_estatico = generar_mapa_estatico_argentina(
         matriz_inicial=matriz_inicial,
+        matriz_final=matriz_final,
         matriz_futura=matriz_futura,
         mapa_riesgo=mapa_riesgo,
         fecha_inicial=fecha_inicial,
@@ -422,6 +447,7 @@ def generar_mapas_argentina(matriz_inicial, matriz_futura, mapa_riesgo,
     
     ruta_interactivo = generar_mapa_interactivo_argentina(
         matriz_inicial=matriz_inicial,
+        matriz_final=matriz_final,
         matriz_futura=matriz_futura,
         mapa_riesgo=mapa_riesgo,
         fecha_inicial=fecha_inicial,

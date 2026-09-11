@@ -164,13 +164,17 @@ def _crear_data_uri_rgba(matriz, color_rgb=(231, 76, 60), alfa=220, aplicar_masc
 def generar_mapa_estatico_corrientes(matriz_inicial, matriz_futura, mapa_riesgo,
                                      fecha_inicial="T0", fecha_final="T_final",
                                      mejores_variables=None, pasos_futuros=100,
-                                     ruta_salida="output/mapa_corrientes_prediccion.png"):
+                                     ruta_salida="output/mapa_corrientes_prediccion.png",
+                                     matriz_final=None):
     """
     Genera un mapa cartográfico GIS de alta resolución (300 DPI) con 3 paneles:
-      Panel 1: Incendio Inicial Observado en Corrientes
-      Panel 2: Predicción del Avance Proyectado (+N ciclos) en Corrientes
-      Panel 3: Mapa de Riesgo Integral y Superposición sobre División Departamental
+      Panel 1: Incendio Inicial Observado en Corrientes (fecha_inicial)
+      Panel 2: Foco Final Expandido Observado (fecha_final, sin rojo de predicción)
+      Panel 3: Mapa de Riesgo Predictivo Integrado (+N ciclos proyectados a partir del foco final)
     """
+    if matriz_final is None:
+        matriz_final = matriz_inicial
+
     os.makedirs(os.path.dirname(ruta_salida), exist_ok=True)
     gdf_corrientes = cargar_geometria_corrientes()
     tamano = matriz_inicial.shape[0]
@@ -178,13 +182,16 @@ def generar_mapa_estatico_corrientes(matriz_inicial, matriz_futura, mapa_riesgo,
     
     # Filtrar fuegos para que respeten la silueta geográfica de Corrientes
     fuego_inicial_prov = np.logical_and(matriz_inicial > 0, mascara_prov).astype(int)
+    fuego_final_prov = np.logical_and(matriz_final > 0, mascara_prov).astype(int)
     fuego_futuro_prov = np.logical_and(matriz_futura > 0, mascara_prov).astype(int)
-    fuego_avance_prov = np.logical_and(fuego_futuro_prov > 0, fuego_inicial_prov == 0).astype(int)
+    
+    # El avance predictivo es la propagación hacia el futuro más allá de los focos finales observados
+    fuego_avance_prov = np.logical_and(fuego_futuro_prov > 0, fuego_final_prov == 0).astype(int)
     
     # Construir mapa de riesgo acotado a la provincia
     riesgo_prov = np.zeros_like(matriz_inicial)
     riesgo_prov[fuego_futuro_prov > 0] = 2
-    riesgo_prov[fuego_inicial_prov > 0] = 1
+    riesgo_prov[fuego_final_prov > 0] = 1
     
     fig, axes = plt.subplots(1, 3, figsize=(22, 7.8), dpi=300)
     extent = [LON_MIN, LON_MAX, LAT_MIN, LAT_MAX]
@@ -208,7 +215,7 @@ def generar_mapa_estatico_corrientes(matriz_inicial, matriz_futura, mapa_riesgo,
     # Colores definidos
     color_foco_inicial = '#d35400'     # Ámbar intenso
     color_avance_rojo = '#e74c3c'      # Rojo carmesí alerta
-    color_foco_base = '#2c3e50'        # Azul noche/carbón
+    color_foco_base = '#2c3e50'        # Azul noche/carbón consolidado
     
     # -------------------------------------------------------------
     # PANEL 1: Incendio Inicial Observado
@@ -217,41 +224,39 @@ def generar_mapa_estatico_corrientes(matriz_inicial, matriz_futura, mapa_riesgo,
     m1 = np.ma.masked_where(fuego_inicial_prov == 0, fuego_inicial_prov)
     cmap_p1 = ListedColormap([color_foco_inicial])
     axes[0].imshow(m1, extent=extent, origin='lower', cmap=cmap_p1, alpha=0.85, zorder=3)
-    p_obs = mpatches.Patch(color=color_foco_inicial, label=f'Foco Satelital Observado ({fecha_inicial})')
+    p_obs = mpatches.Patch(color=color_foco_inicial, label=f'Foco Satelital Inicial ({fecha_inicial})')
     p_prov = mpatches.Patch(facecolor='#f7f9fa', edgecolor='#2c3e50', label='Provincia de Corrientes')
     axes[0].legend(handles=[p_prov, p_obs], loc='lower right', framealpha=0.92)
     
     # -------------------------------------------------------------
-    # PANEL 2: Predicción Futura del Avance
+    # PANEL 2: Foco Final Expandido Observado (Sin Rojo de Predicción)
     # -------------------------------------------------------------
-    axes[1].set_title(f"2. Predicción del Avance Proyectado\n(+{pasos_futuros} Ciclos del Autómata Celular)",
+    axes[1].set_title(f"2. Foco Final Expandido Observado\n({fecha_final})",
                      fontsize=12, fontweight='bold', pad=10)
-    m2_base = np.ma.masked_where(fuego_inicial_prov == 0, fuego_inicial_prov)
-    m2_avance = np.ma.masked_where(fuego_avance_prov == 0, fuego_avance_prov)
+    m2_final = np.ma.masked_where(fuego_final_prov == 0, fuego_final_prov)
+    cmap_final = ListedColormap([color_foco_base])
+    axes[1].imshow(m2_final, extent=extent, origin='lower', cmap=cmap_final, alpha=0.88, zorder=3)
+    
+    p_final = mpatches.Patch(color=color_foco_base, label=f'Foco Observado Consolidado ({fecha_final})')
+    axes[1].legend(handles=[p_prov, p_final], loc='lower right', framealpha=0.92)
+    
+    # -------------------------------------------------------------
+    # PANEL 3: Mapa de Riesgo Predictivo Integrado (+Pasos Futuros)
+    # -------------------------------------------------------------
+    axes[2].set_title(f"3. Mapa de Riesgo Predictivo Integrado\n(+{pasos_futuros} Ciclos del Autómata Celular)",
+                     fontsize=12, fontweight='bold', pad=10)
+    
+    m3_base = np.ma.masked_where(fuego_final_prov == 0, fuego_final_prov)
+    m3_avance = np.ma.masked_where(fuego_avance_prov == 0, fuego_avance_prov)
     
     cmap_base = ListedColormap([color_foco_base])
     cmap_avance = ListedColormap([color_avance_rojo])
     
-    axes[1].imshow(m2_base, extent=extent, origin='lower', cmap=cmap_base, alpha=0.55, zorder=3)
-    axes[1].imshow(m2_avance, extent=extent, origin='lower', cmap=cmap_avance, alpha=0.88, zorder=3)
+    axes[2].imshow(m3_base, extent=extent, origin='lower', cmap=cmap_base, alpha=0.65, zorder=3)
+    axes[2].imshow(m3_avance, extent=extent, origin='lower', cmap=cmap_avance, alpha=0.90, zorder=4)
     
-    p_base = mpatches.Patch(color=color_foco_base, label='Foco Inicial de Partida')
-    p_pred = mpatches.Patch(color=color_avance_rojo, label=f'Avance Proyectado (+{pasos_futuros} ciclos)')
-    axes[1].legend(handles=[p_base, p_pred], loc='lower right', framealpha=0.92)
-    
-    # -------------------------------------------------------------
-    # PANEL 3: Mapa de Riesgo Predictivo Integrado
-    # -------------------------------------------------------------
-    axes[2].set_title("3. Mapa de Riesgo Predictivo Integrado\n(Superposición sobre División Departamental)",
-                     fontsize=12, fontweight='bold', pad=10)
-    
-    # 1: Fuego Base, 2: Expansión Futura
-    cmap_riesgo = ListedColormap([color_foco_base, color_avance_rojo])
-    m3_riesgo = np.ma.masked_where(riesgo_prov == 0, riesgo_prov)
-    axes[2].imshow(m3_riesgo, extent=extent, origin='lower', cmap=cmap_riesgo, vmin=1, vmax=2, alpha=0.88, zorder=3)
-    
-    p_r1 = mpatches.Patch(color=color_foco_base, label='Fuego Observado Consolidado')
-    p_r2 = mpatches.Patch(color=color_avance_rojo, label='Zona en Riesgo de Expansión')
+    p_r1 = mpatches.Patch(color=color_foco_base, label=f'Foco Base Observado ({fecha_final})')
+    p_r2 = mpatches.Patch(color=color_avance_rojo, label=f'Riesgo de Avance Proyectado (+{pasos_futuros} ciclos)')
     axes[2].legend(handles=[p_r1, p_r2], loc='lower right', framealpha=0.92)
     
     # DIBUJAR LÍMITES Y ETIQUETAS DE DEPARTAMENTOS POR ENCIMA DEL FUEGO
@@ -286,15 +291,20 @@ def generar_mapa_estatico_corrientes(matriz_inicial, matriz_futura, mapa_riesgo,
 def generar_mapa_interactivo_corrientes(matriz_inicial, matriz_futura, mapa_riesgo,
                                         fecha_inicial="T0", fecha_final="T_final",
                                         mejores_variables=None, pasos_futuros=100,
-                                        ruta_salida="output/mapa_corrientes_interactivo.html"):
+                                        ruta_salida="output/mapa_corrientes_interactivo.html",
+                                        matriz_final=None):
     """
     Genera un mapa web interactivo en Folium con:
       - Capas base intercambiables (Positron, OpenStreetMap, Satélite ESRI).
       - Polígonos de los 25 departamentos de Corrientes con tooltips informativos.
       - Capa raster georreferenciada del Incendio Inicial (Data URI Base64).
-      - Capa raster georreferenciada de la Predicción del Avance (Data URI Base64).
+      - Capa raster georreferenciada del Foco Final Observado (Data URI Base64).
+      - Capa raster georreferenciada de la Predicción del Avance Futuro (Data URI Base64).
       - Control de capas y leyenda flotante elegante.
     """
+    if matriz_final is None:
+        matriz_final = matriz_inicial
+
     os.makedirs(os.path.dirname(ruta_salida), exist_ok=True)
     gdf_corrientes = cargar_geometria_corrientes()
     
@@ -334,7 +344,10 @@ def generar_mapa_interactivo_corrientes(matriz_inicial, matriz_futura, mapa_ries
     data_uri_inicial = _crear_data_uri_rgba(
         matriz_inicial, color_rgb=(211, 84, 0), alfa=210, aplicar_mascara_provincia=True
     )
-    solo_avance = np.logical_and(matriz_futura > 0, matriz_inicial == 0).astype(int)
+    data_uri_final = _crear_data_uri_rgba(
+        matriz_final, color_rgb=(44, 62, 80), alfa=200, aplicar_mascara_provincia=True
+    )
+    solo_avance = np.logical_and(matriz_futura > 0, matriz_final == 0).astype(int)
     data_uri_avance = _crear_data_uri_rgba(
         solo_avance, color_rgb=(231, 76, 60), alfa=230, aplicar_mascara_provincia=True
     )
@@ -344,6 +357,14 @@ def generar_mapa_interactivo_corrientes(matriz_inicial, matriz_futura, mapa_ries
         bounds=bounds_overlay,
         opacity=0.85,
         name=f'🔥 Foco Inicial Observado ({fecha_inicial})',
+        interactive=True
+    ).add_to(mapa)
+    
+    raster_layers.ImageOverlay(
+        image=data_uri_final,
+        bounds=bounds_overlay,
+        opacity=0.85,
+        name=f'🛰️ Foco Final Expandido ({fecha_final})',
         interactive=True
     ).add_to(mapa)
     
@@ -394,7 +415,7 @@ def generar_mapa_interactivo_corrientes(matriz_inicial, matriz_futura, mapa_ries
     leyenda_html = f"""
     <div style="
         position: fixed; 
-        bottom: 25px; right: 25px; width: 260px;
+        bottom: 25px; right: 25px; width: 270px;
         background-color: rgba(255, 255, 255, 0.95);
         border: 2px solid #2c3e50;
         border-radius: 8px;
@@ -410,6 +431,10 @@ def generar_mapa_interactivo_corrientes(matriz_inicial, matriz_futura, mapa_ries
         <div style="margin-bottom: 5px;">
             <span style="background: #d35400; width: 14px; height: 14px; display: inline-block; vertical-align: middle; border-radius: 2px; margin-right: 6px;"></span>
             <b>Foco Inicial:</b> {fecha_inicial}
+        </div>
+        <div style="margin-bottom: 5px;">
+            <span style="background: #2c3e50; width: 14px; height: 14px; display: inline-block; vertical-align: middle; border-radius: 2px; margin-right: 6px;"></span>
+            <b>Foco Final Observado:</b> {fecha_final}
         </div>
         <div style="margin-bottom: 5px;">
             <span style="background: #e74c3c; width: 14px; height: 14px; display: inline-block; vertical-align: middle; border-radius: 2px; margin-right: 6px;"></span>
@@ -430,18 +455,24 @@ def generar_mapa_interactivo_corrientes(matriz_inicial, matriz_futura, mapa_ries
 
 def generar_mapas_corrientes(matriz_inicial, matriz_futura, mapa_riesgo,
                              fecha_inicial="T0", fecha_final="T_final",
-                             mejores_variables=None, pasos_futuros=100):
+                             mejores_variables=None, pasos_futuros=100,
+                             matriz_final=None):
     """
     Función orquestadora principal que genera tanto el mapa estático GIS como el interactivo HTML,
     y realiza el análisis de departamentos en riesgo en la provincia de Corrientes.
     """
+    if matriz_final is None:
+        matriz_final = matriz_inicial
+
     print("\n" + "="*65)
     print("TRANSPOSICIÓN ESPACIAL: PROYECTANDO FRACTALES SOBRE MAPA DE CORRIENTES")
     print("="*65)
     print(f"Límites Geográficos: Lat [{LAT_MIN} a {LAT_MAX}] | Lon [{LON_MIN} a {LON_MAX}]")
     
-    # 1. Análisis de departamentos afectados
-    ranking = identificar_departamentos_afectados(matriz_futura)
+    # 1. Análisis de departamentos afectados (foco en el nuevo avance predictivo)
+    fuego_avance = np.logical_and(matriz_futura > 0, matriz_final == 0).astype(int)
+    matriz_analisis = fuego_avance if np.sum(fuego_avance) > 0 else matriz_futura
+    ranking = identificar_departamentos_afectados(matriz_analisis)
     if len(ranking) > 0:
         print("\n--- DEPARTAMENTOS DE CORRIENTES CON RIESGO DE AVANCE ---")
         for idx, item in enumerate(ranking[:6], 1):
@@ -452,6 +483,7 @@ def generar_mapas_corrientes(matriz_inicial, matriz_futura, mapa_riesgo,
     # 2. Generar mapa estático PNG
     ruta_estatico = generar_mapa_estatico_corrientes(
         matriz_inicial=matriz_inicial,
+        matriz_final=matriz_final,
         matriz_futura=matriz_futura,
         mapa_riesgo=mapa_riesgo,
         fecha_inicial=fecha_inicial,
@@ -463,6 +495,7 @@ def generar_mapas_corrientes(matriz_inicial, matriz_futura, mapa_riesgo,
     # 3. Generar mapa interactivo HTML
     ruta_interactivo = generar_mapa_interactivo_corrientes(
         matriz_inicial=matriz_inicial,
+        matriz_final=matriz_final,
         matriz_futura=matriz_futura,
         mapa_riesgo=mapa_riesgo,
         fecha_inicial=fecha_inicial,

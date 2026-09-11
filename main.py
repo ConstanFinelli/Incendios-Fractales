@@ -60,6 +60,7 @@ def main():
     print("  📊 output/mapa_riesgo_predictivo.png       (Matriz isócrona multi-horizonte 24h, 48h, 72h)")
     print("  📍 output/mapa_corrientes_prediccion.png   (Mapa GIS 4 paneles de Corrientes @ 300 DPI)")
     print("  🌐 output/mapa_corrientes_interactivo.html  (Mapa Web interactivo multicapa de Corrientes)")
+    print("  🌿 output/mapa_cobertura_combustible.png   (Mapa de susceptibilidad de biomasa IGN WFS)")
     print("  💾 output/npy/                             (Matrices binarias satelitales .npy)")
     print("  🖼️ output/siluetas/                        (Siluetas fractales procesadas .png)")
     print("="*65)

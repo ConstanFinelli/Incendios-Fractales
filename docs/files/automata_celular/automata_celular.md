@@ -37,9 +37,10 @@ Este módulo es el motor computacional de simulación física del proyecto y es 
 - `viento_vel` (float): Velocidad del viento en $\text{km/h} \in [0, 50]$.
 - `viento_dir` (float): Dirección del viento en grados azimutales $\in [0, 360^\circ]$ ($0^\circ = \text{Norte}, 90^\circ = \text{Este}, 180^\circ = \text{Sur}, 270^\circ = \text{Oeste}$).
 - `humedad` (float): Humedad relativa del aire en porcentaje $\in [10\%, 80\%]$.
-- `combustible` (float): Índice de disponibilidad y sequedad de biomasa vegetal $\in [0.1, 1.0]$.
+- `combustible` (float): Coeficiente escalar global de sequedad/disponibilidad $\in [0.1, 1.0]$.
 - `pasos_tiempo` / `pasos_por_dia` (int): Cantidad de ciclos de reloj discretos a iterar (calibrado en $30 \text{ pasos} \equiv 24 \text{ horas}$).
 - `grilla_inicial` (`numpy.ndarray`, opcional): Matriz base sobre la cual iniciar la simulación (focos observados reales o cicatrices previas).
+- `mapa_combustible` (`numpy.ndarray` 2D, opcional): Matriz de coeficientes biofísicos de cobertura vegetal $C_{\text{local}} \in [0.0, 1.0]$ provista por `capa_biomasa.py`. Si es `None`, se carga automáticamente el mapa oficial rasterizado de Corrientes.
 
 ### Salidas:
 - **Matriz de estados:** `numpy.ndarray` con valores enteros $\{0, 1, 2\}$.
@@ -51,6 +52,7 @@ Este módulo es el motor computacional de simulación física del proyecto y es 
 ## 4. Dependencias y Librerías
 - **Cálculo numérico y aleatorio:** `numpy`.
 - **Graficación y mapas de color:** `matplotlib.pyplot`, `matplotlib.colors.ListedColormap`.
+- **Heterogeneidad espacial (T2.1):** `capa_biomasa.obtener_mapa_combustible`.
 
 ---
 
@@ -62,9 +64,16 @@ Cada celda $(y, x)$ de la grilla $256 \times 256$ adopta en cada paso temporal $
 - **Estado 1 (Ardiendo / Frente activo):** Celda en proceso activo de combustión y emisión térmica.
 - **Estado 2 (Quemada / Cenizas):** Biomasa consumida; no puede reencenderse ni propagar fuego.
 
-### Modelo Físico de Propagación:
-La probabilidad base de ignición $P_{\text{base}}$ depende de la carga de combustible $C$ y de la humedad relativa $H \in [0, 1]$:
-$$P_{\text{base}} = C \cdot (1 - H)$$
+### Modelo Físico de Propagación con Heterogeneidad Espacial (T2.1):
+La probabilidad base de ignición $P_{\text{base}}$ depende de la carga local de combustible según el tipo de cobertura biofísica y de la humedad relativa $H \in [0, 1]$:
+$$C_{\text{local}}(y, x) = M_{\text{comb}}(y, x) \cdot c_{\text{global}}$$
+$$P_{\text{base}}(y, x) = C_{\text{local}}(y, x) \cdot (1 - H)$$
+
+- **Cuerpos de agua y esteros profundos:** $M_{\text{comb}}(y, x) = 0.0 \implies P_{\text{ignición}} = 0.0$ (barrera cortafuego absoluta).
+- **Bañados y vegetación hidrófila:** $M_{\text{comb}}(y, x) = 0.2$ (resistencia hídrica elevada).
+- **Pastizales y sabanas:** $M_{\text{comb}}(y, x) = 0.6$ (matriz de propagación base).
+- **Plantaciones forestales:** $M_{\text{comb}}(y, x) = 1.0$ (máxima inflamabilidad y aceleración de copa).
+- **Límites exteriores provinciales:** $M_{\text{comb}}(y, x) = 0.0$ (condición Dirichlet absorbente).
 
 La influencia direccional del viento introduce una **anisotropía exponencial** en la vecindad de Moore (8 vecinos circundantes):
 Para cada vecino en la posición relativa $(\Delta y, \Delta x)$, se define el ángulo espacial del vecino:
@@ -74,7 +83,8 @@ $$\cos(\Delta \theta) = \cos(\theta_{\text{viento}} - \theta_{\text{vecino}})$$
 El factor de amplificación por viento es modelado como:
 $$f_{\text{viento}} = \exp(c_{\text{viento}} \cdot V_{\text{viento}} \cdot \cos(\Delta \theta))$$
 con $c_{\text{viento}} = 0.05$. La probabilidad final de que una celda intacta se encienda por contacto con un vecino en llamas es:
-$$P_{\text{ignición}} = \min(P_{\text{base}} \cdot f_{\text{viento}}, 0.95)$$
+$$P_{\text{ignición}}(y, x) = \min(P_{\text{base}}(y, x) \cdot f_{\text{viento}}, \, 0.95)$$
+Si $C_{\text{local}}(y, x) \le 0.0$, la celda se omite de forma determinística en la evaluación de propagación.
 
 ### Optimización por Localización de Celdas Activas:
 En lugar de recorrer las $256 \times 256 = 65,536$ celdas en cada ciclo temporal, el algoritmo utiliza `np.where(grilla == 1)` para indexar **únicamente las celdas activas**. Las celdas activas pasan automáticamente al estado 2 (cenizas), y solo sus vecinos intactos inmediatos son evaluados contra números pseudoaleatorios uniformes $U(0, 1)$. Esto reduce el tiempo computacional de la simulación en más de un $92\%$.

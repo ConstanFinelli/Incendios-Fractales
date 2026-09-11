@@ -14,8 +14,7 @@ Este documento consolida las líneas de investigación, optimizaciones técnicas
 | **T1.2** | Preprocesamiento | Filtrado multi-cluster por masa crítica ($k \ge 3$) | ✅ **Implementado** | `ver_mapa_filtrado.py` | Preservación de frentes simultáneos en Corrientes |
 | **T1.3** | Preprocesamiento | Cascos cóncavos (*Alpha Shapes / Concave Hull*) | ⏳ *Pendiente* | `ver_mapa_filtrado.py` | Modelado de hendiduras sin dilatación de grilla |
 | **T1.4** | Preprocesamiento | Densidad por Kernel (KDE) ponderada por FRP | ⏳ *Pendiente* | `ver_mapa_filtrado.py` | Superficie continua y curvas de nivel de intensidad |
-| **T1.5** | Preprocesamiento / Fractal | Box-Counting directo sobre conjuntos dispersos | ✅ **Implementado** | `calcular_dimension_fractal.py`, `algoritmo_genetico.py` | Evita colapso perimétrico y ahorra 2.400 erosiones en AG |
-| **T2.1** | Autómata Celular | Capa de combustible y biomasa real (MapBiomas) | ⏳ *Pendiente* | `automata_celular.py` | Heterogeneidad espacial real en Corrientes |
+| **T2.1** | Autómata Celular | Capa de combustible y biomasa real (IGN WFS) | ✅ **Implementado** | `capa_biomasa.py`, `automata_celular.py` | Heterogeneidad espacial real en Corrientes (4 categorías) |
 | **T2.2** | Autómata Celular | Mecanismo de focos secundarios (*Spotting*) | ⏳ *Pendiente* | `automata_celular.py` | Salto de fuego por pavesas impulsadas por viento |
 | **T2.3** | Autómata Celular | Pendiente topográfica (Rothermel / SRTM DEM) | ⏳ *Pendiente* | `automata_celular.py` | Aceleración en pendientes y relieve |
 | **T2.4** | Autómata Celular | Vectores de viento dinámico horario (ERA5-Land) | ⏳ *Pendiente* | `automata_celular.py`, `simulador_predictivo.py` | Variabilidad meteorológica horaria realista |
@@ -84,13 +83,14 @@ El simulador asume actualmente:
 
 ### Tareas a Implementar y Recursos de Cómputo
 
-- [ ] **T2.1: Capa Raster de Cobertura de Suelo y Biomasa Real (Heterogeneidad Espacial)**
-  - *Fundamento:* En Corrientes coexisten pastizales secos, bosques implantados de pino/eucalipto (altamente inflamables), monte nativo y esteros inundables (incombustibles).
-  - *Dataset abierto:* **MapBiomas Chaco / Argentina** o **ESA WorldCover 10m**.
-  - *Herramientas:* `rasterio`, `geopandas`, `rioxarray`.
+- [x] **T2.1: Capa Raster de Cobertura de Suelo y Biomasa Real (Heterogeneidad Espacial)** ✅ *(Implementado)*
+  - *Fundamento:* En Corrientes coexisten pastizales secos, bosques implantados de pino/eucalipto (altamente combustibles), monte nativo y esteros inundables (incombustibles).
+  - *Estado:* Implementado mediante el módulo `capa_biomasa.py` consumiendo geoservicios WFS oficiales del Instituto Geográfico Nacional (IGN Argentina), clasificado en 4 categorías biofísicas ($C \in [0.0, 1.0]$) e integrado en `automata_celular.py`, `algoritmo_genetico.py` y `simulador_predictivo.py`.
+  - *Fuentes de datos oficiales:* Geoservicios WFS IGN: aguas perennes, vegetación hidrófila y plantaciones forestales.
+  - *Herramientas:* `geopandas`, `shapely` (`contains_xy`), `numpy`, `matplotlib`.
   - *Cómputo Adicional:* 
-    - *Fase Preprocesamiento:* $+5 \text{ a } 15 \text{ segundos}$ una única vez para reproyectar y reescalar el GeoTIFF a la matriz $256 \times 256$ (requiere $\approx 200-500 \text{ MB}$ de RAM temporal durante la lectura).
-    - *Durante la corrida del AC:* **Despreciable ($+5\%$ en tiempo de simulación)**. La matriz de combustible se convierte en una grilla estática `matriz_combustible[y, x]` que se indexa en memoria contigua en $O(1)$.
+    - *Fase Preprocesamiento:* $+1 \text{ a } 3 \text{ segundos}$ una única vez para rasterizar mediante `contains_xy` sobre $256 \times 256$, persistido en `data/mapa_combustible_256.npy` para acceso inmediato.
+    - *Durante la corrida del AC:* **Despreciable ($< 2\%$ en tiempo de simulación)**. La matriz de combustible se convierte en una grilla estática `mapa_combustible[y, x]` que se indexa en memoria contigua en $O(1)$.
 
 - [ ] **T2.2: Mecanismo Estocástico de Focos Secundarios por Pavesas (*Spotting Effect*)**
   - *Fundamento:* En incendios forestales severos, el avance no es solo por contacto térmico directo; las pavesas incandescentes vuelan cientos de metros impulsadas por el viento.
@@ -176,7 +176,7 @@ El AG actual implementa un algoritmo genético canónico con codificación real,
 | **T1.3: Alpha Shapes** | ⏳ *Pendiente* | CPU (Delaunay 2D) | $+1 \text{ s}$ (una vez) | $+30 \text{ MB}$ |  Inmediata | No |
 | **T1.4: Densidad KDE (FRP)** | ⏳ *Pendiente* | CPU (Evaluación Kernel) | $+3 \text{ s}$ (una vez) | $+80 \text{ MB}$ |  Inmediata | No |
 | **T1.5: Box-Counting Disperso** | ✅ **Implementado** | CPU (Reshape NumPy) | $-5\%$ (Más rápido) | $0 \text{ MB}$ |  Inmediata | No |
-| **T2.1: Combustible MapBiomas** | ⏳ *Pendiente* | CPU / I/O Disco | $+10 \text{ s}$ inicio / $+5\%$ AC | $+300 \text{ MB}$ |  Muy viable | No |
+| **T2.1: Combustible Real IGN** | ✅ **Implementado** | CPU (Rasterización WFS) | $+1 \text{ s}$ inicio / $<2\%$ AC | $+40 \text{ MB}$ |  Inmediata | No |
 | **T2.2: Pavesas (Spotting)** | ⏳ *Pendiente* | CPU (Muestreo estocástico) | $+20\%$ en cada AC | $+10 \text{ MB}$ |  Muy viable | No |
 | **T2.3: Topografía SRTM** | ⏳ *Pendiente* | CPU (Gradiente Sobel) | $+2 \text{ s}$ inicio | $+50 \text{ MB}$ |  Inmediata | No |
 | **T2.4: Viento Dinámico ERA5** | ⏳ *Pendiente* | CPU / I/O Disco | $+1 \text{ s}$ inicio | $+30 \text{ MB}$ |  Inmediata | No |

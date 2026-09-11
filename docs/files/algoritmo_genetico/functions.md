@@ -34,17 +34,18 @@
 ---
 
 <a id="evaluar_fitness_multitemporal"></a>
-### `evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES)`
-- **Firma:** `def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES):`
-- **Descripción:** Evalúa la calidad de un individuo en $num\_simulaciones$ réplicas Monte Carlo bajo el principio físico de expansión desde celdas iniciales:
+### `evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES, mapa_combustible=None)`
+- **Firma:** `def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES, mapa_combustible=None):`
+- **Descripción:** Evalúa la calidad de un individuo en $num\_simulaciones$ réplicas Monte Carlo bajo el principio físico de expansión desde celdas iniciales, integrando la heterogeneidad espacial biofísica (T2.1):
   - **Punto de Partida Físico ($T_0$):** El autómata celular se inicializa siempre con **todas las celdas activas correspondientes a los puntos de calor del día de inicio**, sin forzar su colapso a un baricentro único.
-  - **Evolución Multitemporal hacia los demás días:** Para cada transición temporal ($T_{k-1} \to T_k$), avanza la grilla continua `pasos_por_dia` pasos (30 ciclos) usando `_avanzar_pasos_AC`, expandiéndose hacia las demás zonas y midiendo la concordancia híbrida (50% Dimensión Fractal directa $D$ + 50% IoU) contra la foto satelital real del día $T_k$. Promedia las aptitudes de todas las etapas.
+  - **Evolución Multitemporal hacia los demás días:** Para cada transición temporal ($T_{k-1} \to T_k$), avanza la grilla continua `pasos_por_dia` pasos (30 ciclos) usando `_avanzar_pasos_AC` modulado por el mapa de combustible raster, expandiéndose hacia las demás zonas y midiendo la concordancia híbrida (50% Dimensión Fractal directa $D$ + 50% IoU) contra la foto satelital real del día $T_k$. Promedia las aptitudes de todas las etapas.
   - **Caso de 1 solo día:** Si se suministra una sola fecha, la simulación arranca igualmente desde todas las celdas de calor reales observadas en dicha fecha y avanza `pasos_por_dia` pasos, contrastando la preservación fractal y solapamiento.
 - **Parámetros:**
-  - `individuo` (list): Vector de 4 genes.
+  - `individuo` (list): Vector de 4 genes `[viento_vel, viento_dir, humedad, combustible]`.
   - `datos_serie` (list): Lista devuelta por `cargar_datos_serie_temporal`.
   - `pasos_por_dia` (int, opcional): Ciclos por día (30).
   - `num_simulaciones` (int, opcional): Réplicas Monte Carlo (3).
+  - `mapa_combustible` (np.ndarray, opcional): Matriz 2D $[0.0, 1.0]$ con la susceptibilidad de combustible de Corrientes (IGN WFS).
 - **Retorno:** `float` con el fitness promedio del individuo en el rango $[0.0, 1.0]$.
 
 ---
@@ -54,7 +55,7 @@
 - **Firma:** `def _evaluar_individuo_worker(args):`
 - **Descripción:** Función auxiliar de nivel superior (top-level) diseñada para ser serializable con `pickle` bajo Windows al utilizar `ProcessPoolExecutor`. Desempaqueta la tupla de argumentos y llama a `evaluar_fitness_multitemporal`.
 - **Parámetros:**
-  - `args` (tuple): `(individuo, datos_serie, pasos_por_dia, num_simulaciones)`.
+  - `args` (tuple): Tupla de 4 o 5 elementos `(individuo, datos_serie, pasos_por_dia, num_simulaciones[, mapa_combustible])`.
 - **Retorno:** Tupla `(individuo, fit)`.
 
 ---
@@ -150,4 +151,9 @@
 - **`procesar_rango_fechas`** *(Importado condicionalmente en `if __name__ == '__main__':`)*:
   - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/ver_mapa_filtrado/functions.md`](../ver_mapa_filtrado/functions.md).
   - *Rol en `algoritmo_genetico.py`:* Permite correr el algoritmo genético como un script independiente por línea de comandos pasando dos fechas como argumentos.
+
+### Provenientes de `capa_biomasa.py`:
+- **`obtener_mapa_combustible`**:
+  - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/capa_biomasa/functions.md`](../capa_biomasa/functions.md).
+  - *Rol en `algoritmo_genetico.py`:* Carga o sintetiza la matriz 2D de susceptibilidad biofísica de Corrientes (IGN WFS) para inyectar heterogeneidad espacial en la evaluación paralela del autómata celular durante la optimización genética (T2.1).
 

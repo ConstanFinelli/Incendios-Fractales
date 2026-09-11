@@ -1,0 +1,139 @@
+# Funciones de `algoritmo_genetico.py`
+
+## 1. Funciones Definidas en este Archivo
+
+### `cargar_datos_serie_temporal(entradas)`
+- **Firma:** `def cargar_datos_serie_temporal(entradas):`
+- **Descripción:** Carga desde el disco una o varias matrices satelitales (`.npy`) generadas en la Fase 1. En el caso de una serie multitemporal, va consolidando la cicatriz histórica acumulada mediante una unión lógica, extrae el perímetro morfológico del fuego y computa previamente la Dimensión Fractal real ($D_{\text{real}}$) de cada día con el algoritmo de Box-Counting.
+- **Parámetros:**
+  - `entradas` (str o list): Ruta de un único archivo `.npy` o lista de tuplas `[(fecha, ruta), ...]`.
+- **Retorno:** `list` de diccionarios con la estructura:
+  ```python
+  [{
+      'fecha': str,
+      'ruta': str,
+      'matriz': np.ndarray,
+      'dimension_fractal': float
+  }, ...]
+  ```
+
+---
+
+### `generar_individuo()`
+- **Firma:** `def generar_individuo():`
+- **Descripción:** Instancia un cromosoma aleatorio dentro de los rangos biofísicos admisibles para el incendio:
+  - Viento: $[0, 50] \text{ km/h}$.
+  - Dirección: $[0, 360^\circ]$.
+  - Humedad: $[10\%, 80\%]$.
+  - Combustible: $[0.1, 1.0]$.
+- **Parámetros:** Ninguno.
+- **Retorno:** `list` de 4 elementos float `[viento_vel, viento_dir, humedad, combustible]`.
+
+---
+
+### `evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES)`
+- **Firma:** `def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES):`
+- **Descripción:** Evalúa la calidad de un individuo en $num\_simulaciones$ réplicas Monte Carlo:
+  - **Caso estático (1 día):** Inicializa el AC con un foco puntual centrado en el centroide de masa del fuego satelital, ejecuta 100 pasos y calcula el fitness híbrido contra la foto del día.
+  - **Caso multitemporal (> 1 día):** Inicializa el AC con el fuego del Día 0 ($T_0$). Para cada transición temporal ($T_{k-1} \to T_k$), avanza la grilla continua `pasos_por_dia` pasos (30 ciclos) usando `_avanzar_pasos_AC`, mide el fitness híbrido (50% Fractal + 50% IoU) contra la foto real del día $T_k$, y promedia las aptitudes de todas las etapas.
+- **Parámetros:**
+  - `individuo` (list): Vector de 4 genes.
+  - `datos_serie` (list): Lista devuelta por `cargar_datos_serie_temporal`.
+  - `pasos_por_dia` (int, opcional): Ciclos por día (30).
+  - `num_simulaciones` (int, opcional): Réplicas Monte Carlo (3).
+- **Retorno:** `float` con el fitness promedio del individuo en el rango $[0.0, 1.0]$.
+
+---
+
+### `_evaluar_individuo_worker(args)`
+- **Firma:** `def _evaluar_individuo_worker(args):`
+- **Descripción:** Función auxiliar de nivel superior (top-level) diseñada para ser serializable con `pickle` bajo Windows al utilizar `ProcessPoolExecutor`. Desempaqueta la tupla de argumentos y llama a `evaluar_fitness_multitemporal`.
+- **Parámetros:**
+  - `args` (tuple): `(individuo, datos_serie, pasos_por_dia, num_simulaciones)`.
+- **Retorno:** Tupla `(individuo, fit)`.
+
+---
+
+### `cruzar(padre1, padre2)`
+- **Firma:** `def cruzar(padre1, padre2):`
+- **Descripción:** Aplica el operador de recombinación o cruce en un punto aleatorio (`1-point crossover`) sobre los vectores cromosómicos de los progenitores.
+- **Parámetros:**
+  - `padre1`, `padre2` (list): Cromosomas de los progenitores.
+- **Retorno:** Tupla `(hijo1, hijo2)` con los dos nuevos individuos descendientes.
+
+---
+
+### `mutar(individuo)`
+- **Firma:** `def mutar(individuo):`
+- **Descripción:** Con probabilidad `PROB_MUTACION` ($0.2$), selecciona aleatoriamente uno de los 4 genes del cromosoma y le asigna un nuevo valor continuo dentro de su rango físico permitido.
+- **Parámetros:**
+  - `individuo` (list): Cromosoma a mutar.
+- **Retorno:** `list` con el individuo (mutado o inalterado).
+
+---
+
+### `seleccion_torneo(fitness_poblacion, k=3)`
+- **Firma:** `def seleccion_torneo(fitness_poblacion, k=3):`
+- **Descripción:** Selecciona aleatoriamente una muestra de $k$ individuos de la población y retorna el cromosoma que ostenta el mayor valor de fitness.
+- **Parámetros:**
+  - `fitness_poblacion` (list): Lista de tuplas `(individuo, fitness)`.
+  - `k` (int, opcional): Tamaño del torneo. Por defecto `3`.
+- **Retorno:** `list` con el cromosoma ganador del torneo.
+
+---
+
+### `guardar_grafico_fitness(historial, ruta_salida='output/curva_fitness.png')`
+- **Firma:** `def guardar_grafico_fitness(historial, ruta_salida='output/curva_fitness.png'):`
+- **Descripción:** Genera un gráfico de líneas a 300 DPI que ilustra la curva de aprendizaje evolutivo a lo largo de las generaciones, comparando el mejor fitness de cada generación contra el promedio de la población.
+- **Parámetros:**
+  - `historial` (list): Lista de diccionarios de telemetría generacionales.
+  - `ruta_salida` (str, opcional): Ruta del archivo PNG a exportar.
+- **Retorno:** `None`.
+
+---
+
+### `guardar_csv_resultados(historial, mejor_individuo, mejor_fitness)`
+- **Firma:** `def guardar_csv_resultados(historial, mejor_individuo, mejor_fitness):`
+- **Descripción:** Exporta dos archivos CSV estructurados:
+  1. `output/historial_fitness.csv`: Detalle por generación del fitness y de las variables del individuo líder.
+  2. `output/resultados_optimizacion.csv`: Reporte final con los parámetros climáticos inferidos, el fitness alcanzado y las ponderaciones utilizadas.
+- **Parámetros:**
+  - `historial` (list): Historial evolutivo completo.
+  - `mejor_individuo` (list): Cromosoma del mejor espécimen global.
+  - `mejor_fitness` (float): Puntaje de fitness del mejor espécimen.
+- **Retorno:** `None`.
+
+---
+
+### `ejecutar_algoritmo_genetico(entradas_matrices)`
+- **Firma:** `def ejecutar_algoritmo_genetico(entradas_matrices):`
+- **Descripción:** Función orquestadora de la Fase 2. Inicializa el pool de procesos con `ProcessPoolExecutor` aprovechando todos los núcleos CPU disponibles ($N-1$), inicializa la población aleatoria y ejecuta el bucle de $40$ generaciones. En cada generación evalúa en paralelo, aplica elitismo (top 2), realiza selección por torneo, cruce y mutación. Al concluir, exporta los reportes CSV y gráficos, retornando el mejor vector climático hallado.
+- **Parámetros:**
+  - `entradas_matrices`: Matriz única o serie multitemporal.
+- **Retorno:** `list` con las 4 variables óptimas `[viento_vel, viento_dir, humedad, combustible]`, o `None` en caso de fallo.
+
+---
+
+## 2. Funciones y Constantes Importadas de Otros Módulos del Proyecto
+
+### Provenientes de `automata_celular.py`:
+- **`simular_incendio_AC`**:
+  - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/automata_celular/functions.md`](../automata_celular/functions.md).
+  - *Rol en `algoritmo_genetico.py`:* Se invoca en la evaluación estática de un solo día para simular el incendio desde un centroide.
+- **`_avanzar_pasos_AC`**:
+  - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/automata_celular/functions.md`](../automata_celular/functions.md).
+  - *Rol en `algoritmo_genetico.py`:* Se utiliza en la evaluación multitemporal para avanzar la grilla día a día (30 pasos por etapa diaria).
+
+### Provenientes de `calcular_dimension_fractal.py`:
+- **`extraer_perimetro`**:
+  - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/calcular_dimension_fractal/functions.md`](../calcular_dimension_fractal/functions.md).
+  - *Rol en `algoritmo_genetico.py`:* Extrae el contorno exterior tanto de la cicatriz satelital real como de la simulación del autómata celular.
+- **`calcular_box_counting`**:
+  - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/calcular_dimension_fractal/functions.md`](../calcular_dimension_fractal/functions.md).
+  - *Rol en `algoritmo_genetico.py`:* Computa la dimensión fractal $D$ para comparar el grado de ramificación entre la realidad y la simulación.
+
+### Provenientes de `ver_mapa_filtrado.py`:
+- **`procesar_rango_fechas`** *(Importado condicionalmente en `if __name__ == '__main__':`)*:
+  - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/ver_mapa_filtrado/functions.md`](../ver_mapa_filtrado/functions.md).
+  - *Rol en `algoritmo_genetico.py`:* Permite correr el algoritmo genético como un script independiente por línea de comandos pasando dos fechas como argumentos.
+

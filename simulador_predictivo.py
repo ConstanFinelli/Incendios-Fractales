@@ -23,12 +23,8 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
         fecha_inicial, ruta_inicial = datos_entrada[0]
         fecha_final, ruta_final = datos_entrada[-1]
         matriz_inicial = np.load(ruta_inicial)
-        
-        # Generar matriz final acumulativa (cicatriz histórica consolidada de partida)
-        matriz_final = np.zeros_like(matriz_inicial)
-        for _, ruta in datos_entrada:
-            matriz_dia = np.load(ruta)
-            matriz_final = np.logical_or(matriz_final > 0, matriz_dia > 0).astype(int)
+        # El punto de partida de la predicción es el foco activo del último día observado
+        matriz_final = np.load(ruta_final)
             
         modo_multitemporal = len(datos_entrada) > 1
     elif isinstance(datos_entrada, np.ndarray):

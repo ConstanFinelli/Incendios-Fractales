@@ -94,7 +94,7 @@
 <a id="guardar_grafico_fitness"></a>
 ### `guardar_grafico_fitness(historial, ruta_salida='output/curva_fitness.png')`
 - **Firma:** `def guardar_grafico_fitness(historial, ruta_salida='output/curva_fitness.png'):`
-- **Descripción:** Genera un gráfico de líneas a 300 DPI que ilustra la curva de aprendizaje evolutivo a lo largo de las generaciones, comparando el mejor fitness de cada generación contra el promedio de la población.
+- **Descripción:** Genera un gráfico de líneas a 300 DPI que ilustra la curva de aprendizaje evolutivo a lo largo de las generaciones. Representa el récord global acumulado del mejor fitness (monótonamente no decreciente $\nearrow$ propio del elitismo) junto con el mejor fitness puntual medido en cada generación y el fitness promedio de la población.
 - **Parámetros:**
   - `historial` (list): Lista de diccionarios de telemetría generacionales.
   - `ruta_salida` (str, opcional): Ruta del archivo PNG a exportar.
@@ -106,7 +106,7 @@
 ### `guardar_csv_resultados(historial, mejor_individuo, mejor_fitness)`
 - **Firma:** `def guardar_csv_resultados(historial, mejor_individuo, mejor_fitness):`
 - **Descripción:** Exporta dos archivos CSV estructurados:
-  1. `output/historial_fitness.csv`: Detalle por generación del fitness y de las variables del individuo líder.
+  1. `output/historial_fitness.csv`: Detalle por generación del récord global acumulado (`Mejor_Fitness_Global`), el fitness de la generación (`Mejor_Fitness_Gen`), el promedio y los genes climáticos correspondientes al récord global.
   2. `output/resultados_optimizacion.csv`: Reporte final con los parámetros climáticos inferidos, el fitness alcanzado y las ponderaciones utilizadas.
 - **Parámetros:**
   - `historial` (list): Historial evolutivo completo.

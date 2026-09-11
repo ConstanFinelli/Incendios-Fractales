@@ -227,13 +227,16 @@ def seleccion_torneo(fitness_poblacion, k=3):
     return participantes[0][0]
 
 def guardar_grafico_fitness(historial, ruta_salida='output/curva_fitness.png'):
-    """Genera y guarda el gráfico de convergencia del mejor fitness y fitness promedio."""
+    """Genera y guarda el gráfico de convergencia del récord global acumulado y el fitness promedio."""
     generaciones = [h['generacion'] for h in historial]
-    mejores = [h['mejor_fitness'] for h in historial]
+    mejores_globales = [h['mejor_fitness'] for h in historial]
     promedios = [h['promedio_fitness'] for h in historial]
     
     plt.figure(figsize=(10, 6))
-    plt.plot(generaciones, mejores, 'g-o', linewidth=2, label='Mejor Fitness')
+    plt.plot(generaciones, mejores_globales, 'g-o', linewidth=2, label='Mejor Fitness (Récord Global)')
+    if 'mejor_fitness_gen' in historial[0]:
+        mejores_gen = [h['mejor_fitness_gen'] for h in historial]
+        plt.plot(generaciones, mejores_gen, 'g--', alpha=0.35, linewidth=1.2, label='Mejor de la Generación')
     plt.plot(generaciones, promedios, 'b--s', linewidth=1.5, label='Fitness Promedio')
     plt.title(f"Evolución del Fitness por Generación (Ponderación {PESO_FRACTAL}*Fractal + {PESO_IOU}*IoU)", fontsize=13, pad=15)
     plt.xlabel("Generación", fontsize=12)
@@ -255,11 +258,12 @@ def guardar_csv_resultados(historial, mejor_individuo, mejor_fitness):
     ruta_historial = 'output/historial_fitness.csv'
     with open(ruta_historial, mode='w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow(['Generacion', 'Mejor_Fitness', 'Promedio_Fitness', 'Viento_Vel_kmh', 'Viento_Dir_deg', 'Humedad_pct', 'Combustible'])
+        writer.writerow(['Generacion', 'Mejor_Fitness_Global', 'Mejor_Fitness_Gen', 'Promedio_Fitness', 'Viento_Vel_kmh', 'Viento_Dir_deg', 'Humedad_pct', 'Combustible'])
         for h in historial:
             writer.writerow([
                 h['generacion'],
                 f"{h['mejor_fitness']:.6f}",
+                f"{h.get('mejor_fitness_gen', h['mejor_fitness']):.6f}",
                 f"{h['promedio_fitness']:.6f}",
                 f"{h['viento_vel']:.2f}",
                 f"{h['viento_dir']:.2f}",
@@ -334,19 +338,20 @@ def ejecutar_algoritmo_genetico(entradas_matrices):
                 
             historial_telemetria.append({
                 'generacion': generacion + 1,
-                'mejor_fitness': mejor_fit_gen,
+                'mejor_fitness': mejor_fitness_global,
+                'mejor_fitness_gen': mejor_fit_gen,
                 'promedio_fitness': avg_fit_gen,
-                'viento_vel': mejor_ind_gen[0],
-                'viento_dir': mejor_ind_gen[1],
-                'humedad': mejor_ind_gen[2],
-                'combustible': mejor_ind_gen[3]
+                'viento_vel': mejor_individuo_global[0],
+                'viento_dir': mejor_individuo_global[1],
+                'humedad': mejor_individuo_global[2],
+                'combustible': mejor_individuo_global[3]
             })
             
-            print(f"Gen {generacion+1:02d}/{GENERACIONES:02d} | Mejor Fitness: {mejor_fit_gen:.4f} (Prom: {avg_fit_gen:.4f}) | Viento: {mejor_ind_gen[0]:.1f}km/h @ {mejor_ind_gen[1]:.1f}° | Humedad: {mejor_ind_gen[2]:.1f}% | Comb: {mejor_ind_gen[3]:.2f}")
+            print(f"Gen {generacion+1:02d}/{GENERACIONES:02d} | Récord Global: {mejor_fitness_global:.4f} (Gen: {mejor_fit_gen:.4f}, Prom: {avg_fit_gen:.4f}) | Viento: {mejor_individuo_global[0]:.1f}km/h @ {mejor_individuo_global[1]:.1f}° | Humedad: {mejor_individuo_global[2]:.1f}% | Comb: {mejor_individuo_global[3]:.2f}")
             
             # Elitismo: Conservar los 2 mejores
             NUM_ELITES = 2
-            nueva_poblacion = [ind_fit[0] for ind_fit in fitness_poblacion[:NUM_ELITES]]
+            nueva_poblacion = [list(ind_fit[0]) for ind_fit in fitness_poblacion[:NUM_ELITES]]
             
             # Reproducción (Torneo + Cruce + Mutación)
             while len(nueva_poblacion) < TAMANO_POBLACION:

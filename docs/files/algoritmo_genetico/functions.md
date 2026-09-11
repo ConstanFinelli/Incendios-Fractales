@@ -38,8 +38,8 @@
 - **Firma:** `def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES, mapa_combustible=None):`
 - **Descripción:** Evalúa la calidad de un individuo en $num\_simulaciones$ réplicas Monte Carlo bajo el principio físico de expansión desde celdas iniciales, integrando la heterogeneidad espacial biofísica (T2.1):
   - **Punto de Partida Físico ($T_0$):** El autómata celular se inicializa siempre con **todas las celdas activas correspondientes a los puntos de calor del día de inicio**, sin forzar su colapso a un baricentro único.
-  - **Evolución Multitemporal hacia los demás días:** Para cada transición temporal ($T_{k-1} \to T_k$), avanza la grilla continua `pasos_por_dia` pasos (30 ciclos) usando `_avanzar_pasos_AC` modulado por el mapa de combustible raster, expandiéndose hacia las demás zonas y midiendo la concordancia híbrida (50% Dimensión Fractal directa $D$ + 50% IoU) contra la foto satelital real del día $T_k$. Promedia las aptitudes de todas las etapas.
-  - **Caso de 1 solo día:** Si se suministra una sola fecha, la simulación arranca igualmente desde todas las celdas de calor reales observadas en dicha fecha y avanza `pasos_por_dia` pasos, contrastando la preservación fractal y solapamiento.
+  - **Evolución Multitemporal hacia los demás días:** Para cada transición temporal ($T_{k-1} \to T_k$), avanza la grilla continua `pasos_por_dia` pasos (30 ciclos) usando `_avanzar_pasos_AC` modulado por el mapa de combustible raster, expandiéndose hacia las demás zonas y midiendo la concordancia híbrida (50% Dimensión Fractal directa $D$ + 50% Cobertura Eficiente Espacial $F_1$-Dice) contra la foto satelital real del día $T_k$. Promedia las aptitudes de todas las etapas.
+  - **Caso de 1 solo día:** Si se suministra una sola fecha, la simulación arranca igualmente desde todas las celdas de calor reales observadas en dicha fecha y avanza `pasos_por_dia` pasos, contrastando la preservación fractal y cobertura eficiente $F_1$-Dice.
 - **Parámetros:**
   - `individuo` (list): Vector de 4 genes `[viento_vel, viento_dir, humedad, combustible]`.
   - `datos_serie` (list): Lista devuelta por `cargar_datos_serie_temporal`.
@@ -107,7 +107,7 @@
 - **Firma:** `def guardar_csv_resultados(historial, mejor_individuo, mejor_fitness):`
 - **Descripción:** Exporta dos archivos CSV estructurados:
   1. `output/historial_fitness.csv`: Detalle por generación del récord global acumulado (`Mejor_Fitness_Global`), el fitness de la generación (`Mejor_Fitness_Gen`), el promedio y los genes climáticos correspondientes al récord global.
-  2. `output/resultados_optimizacion.csv`: Reporte final con los parámetros climáticos inferidos, el fitness alcanzado y las ponderaciones utilizadas.
+  2. `output/resultados_optimizacion.csv`: Reporte final con los parámetros climáticos inferidos, el fitness alcanzado y las ponderaciones utilizadas (`Peso_Fractal_Utilizado`, `Peso_Espacial_F1_Utilizado` y `Peso_IoU_Utilizado`).
 - **Parámetros:**
   - `historial` (list): Historial evolutivo completo.
   - `mejor_individuo` (list): Cromosoma del mejor espécimen global.

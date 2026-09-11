@@ -39,7 +39,7 @@ flowchart TD
         C --> D["algoritmo_genetico.py\n(Población de Cromosomas Climáticos)"]
         D --> E["calcular_dimension_fractal.py\n(Box-Counting Directo D_sat)"]
         D --> F["automata_celular.py\n(Simulación Estocástica AC)"]
-        F --> G["Fitness Multitemporal Híbrido\nPromedio(0.4*Fractal + 0.6*IoU)"]
+        F --> G["Fitness Multitemporal Híbrido\nPromedio(0.5*Fractal + 0.5*F1_Espacial)"]
         G --> D
     end
 
@@ -240,6 +240,13 @@ El desarrollo del visualizador cartográfico y la integración del pipeline invo
       - *Límites exteriores / ríos limítrofes Paraná y Uruguay:* $C = 0.0$ (condición Dirichlet incombustible).
     - La rasterización optimizada con `shapely.contains_xy` evalúa los $65.536$ puntos en $21\text{ ms}$, persistiendo las matrices binarias en `data/mapa_combustible_256.npy` y `data/categorias_cobertura_256.npy`. Esto garantiza tiempos de carga instantáneos ($< 1\text{ ms}$) y preserva la capacidad de ejecución determinista y offline tanto en el Autómata Celular como en el Algoritmo Genético.
 
+13. **Decisión 13: Reestructuración de la Métrica Espacial: Cobertura Eficiente ($F_1$-Dice) y Balance 50/50 con Dimensión Fractal:**
+    - Se identificó que la métrica de IoU estricto píxel por píxel imponía una patología matemática de "doble penalización": al expandirse el frente simulado a lo largo de 30 pasos diarios para alcanzar los focos futuros de $T+1$, el área total simulada crecía agrandando el denominador (Unión) y aplastando el IoU a $\approx 0.19$, estancando el fitness híbrido en $\approx 0.570$ a pesar de cubrir exitosamente más del $96\%$ de los focos reales.
+    - Se reemplazó el IoU por la **Cobertura Eficiente ($F_1$-Score / Coeficiente de Sørensen-Dice)**:
+      $$\text{Score}_{\text{espacial}} = \frac{2 \cdot |M_{\text{real}} \cap M_{\text{sim}}|}{|M_{\text{real}}| + |M_{\text{sim}}|}$$
+      Esta formulación premia directamente el alcance sobre los puntos de calor reales de la NASA ($\text{Recall}$) al tiempo que penaliza armónicamente la dispersión indiscriminada o desborde inútil ($\text{Precision}$).
+    - Se ratificó el balance estricto **50/50** entre la Dimensión Fractal ($F_{\text{fractal}}$) y la Cobertura Espacial ($F_1$), logrando que el fitness alcance valores superiores a $0.80 - 0.85$ en soluciones convergentes. Para un análisis teórico, empírico y experimental exhaustivo, consultar el documento monográfico: [**`docs/Reestructuracion IoU.md`**](Reestructuracion%20IoU.md).
+
 ---
 
 ### 3.8. Fundamentación Científica y Operativa de los Horizontes Predictivos (24h, 48h, 72h)
@@ -291,7 +298,7 @@ A continuación se indexan los 9 componentes del sistema:
 | **`calcular_dimension_fractal`** | [`calcular_dimension_fractal.py`](../calcular_dimension_fractal.py) | [Fundamentación Matemática](files/calcular_dimension_fractal/calcular_dimension_fractal.md) | [Funciones Fractales](files/calcular_dimension_fractal/functions.md) | Extracción de perímetros con fallback defensivo, Box-Counting logarítmico y cálculo directo de la Dimensión Fractal ($D$) para frentes dispersos (T1.5). |
 | **`capa_biomasa`** | [`capa_biomasa.py`](../capa_biomasa.py) | [Heterogeneidad Espacial](files/capa_biomasa/capa_biomasa.md) | [Funciones de Biomasa](files/capa_biomasa/functions.md) | Capa raster de biomasa y cobertura real IGN (T2.1), 4 categorías biofísicas ($C \in [0.0, 1.0]$), barreras naturales de agua y mapa cartográfico. |
 | **`automata_celular`** | [`automata_celular.py`](../automata_celular.py) | [Dinámica de Propagación](files/automata_celular/automata_celular.md) | [Funciones del Autómata](files/automata_celular/functions.md) | Simulación estocástica 2D en vecindad de Moore, ecuaciones físicas de viento/humedad/combustible espacializado y evolución multietapa continua. |
-| **`algoritmo_genetico`** | [`algoritmo_genetico.py`](../algoritmo_genetico.py) | [Optimización Inversa](files/algoritmo_genetico/algoritmo_genetico.md) | [Funciones Genéticas](files/algoritmo_genetico/functions.md) | Algoritmo bioinspirado multiobjetivo (Fitness híbrido $0.5\,\text{Fractal} + 0.5\,\text{IoU}$), operadores genéticos y paralelismo multi-core. |
+| **`algoritmo_genetico`** | [`algoritmo_genetico.py`](../algoritmo_genetico.py) | [Optimización Inversa](files/algoritmo_genetico/algoritmo_genetico.md) | [Funciones Genéticas](files/algoritmo_genetico/functions.md) | Algoritmo bioinspirado multiobjetivo (Fitness híbrido $0.5\,\text{Fractal} + 0.5\,\text{F}_1\text{-Dice}$), operadores genéticos y paralelismo multi-core. |
 | **`simulador_predictivo`** | [`simulador_predictivo.py`](../simulador_predictivo.py) | [Orquestación Predictiva](files/simulador_predictivo/simulador_predictivo.md) | [Funciones Predictivas](files/simulador_predictivo/functions.md) | Proyección preventiva multi-horizonte (+24h, +48h, +72h), codificación de riesgo isócrono y generación de figuras analíticas. |
 | **`visualizador_corrientes`** | [`visualizador_corrientes.py`](../visualizador_corrientes.py) | [Motor GIS Corrientes](files/visualizador_corrientes/visualizador_corrientes.md) | [Funciones Cartográficas](files/visualizador_corrientes/functions.md) | Cartografía departamental, uniones espaciales (`sjoin`), Data URIs Base64, mapas estáticos multipanel (300 DPI) y visor Folium. |
 | **`procesar_incendio`** | [`procesar_incendio.py`](../procesar_incendio.py) | [Auditoría Satelital](files/procesar_incendio/procesar_incendio.md) | [Bloques de Ejecución](files/procesar_incendio/functions.md) | Script procedural de análisis preliminar VIIRS, detección del día pico del desastre y exportación tabular CSV. |

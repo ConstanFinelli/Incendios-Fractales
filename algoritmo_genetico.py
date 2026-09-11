@@ -20,7 +20,8 @@ NUM_SIMULACIONES = 5         # Cantidad de corridas Monte Carlo por individuo pa
 
 # PONDERACIÓN DE LA FUNCIÓN DE APTITUD (FITNESS HÍBRIDO)
 PESO_FRACTAL = 0.5           # Peso asignado a la Dimensión Fractal del perímetro/frente activo
-PESO_IOU = 0.5               # Peso asignado a la Superposición Espacial (IoU)
+PESO_ESPACIAL = 0.5          # Peso asignado a la Cobertura Eficiente Espacial (F1-Dice)
+PESO_IOU = PESO_ESPACIAL      # Alias retrocompatible
 
 def cargar_datos_serie_temporal(entradas):
     """
@@ -130,9 +131,11 @@ def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_PO
             error_fractal = abs(D_objetivo - D_sim)
             fitness_fractal = 1.0 / (1.0 + error_fractal)
             interseccion = np.logical_and(matriz_real > 0, matriz_binaria > 0).sum()
-            union = np.logical_or(matriz_real > 0, matriz_binaria > 0).sum()
-            iou = (interseccion / union) if union > 0 else 0.0
-            suma_fitness += (PESO_FRACTAL * fitness_fractal) + (PESO_IOU * iou)
+            puntos_reales = (matriz_real > 0).sum()
+            puntos_sim = (matriz_binaria > 0).sum()
+            denominador_espacial = puntos_reales + puntos_sim
+            score_espacial = (2.0 * interseccion / denominador_espacial) if denominador_espacial > 0 else 0.0
+            suma_fitness += (PESO_FRACTAL * fitness_fractal) + (PESO_ESPACIAL * score_espacial)
             
         return suma_fitness / num_simulaciones
         
@@ -170,13 +173,16 @@ def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_PO
             error_fractal = abs(D_objetivo_t - D_sim_t)
             fitness_fractal = 1.0 / (1.0 + error_fractal)
             
-            # 2. Superposición espacial (IoU) del día t
+            # 2. Cobertura Eficiente Espacial (F1-Dice) del día t
+            # Beneficia a las simulaciones que cubren los focos reales con mínima dispersión innecesaria
             interseccion = np.logical_and(matriz_real_t > 0, matriz_binaria_sim > 0).sum()
-            union = np.logical_or(matriz_real_t > 0, matriz_binaria_sim > 0).sum()
-            iou = (interseccion / union) if union > 0 else 0.0
+            puntos_reales_t = (matriz_real_t > 0).sum()
+            puntos_sim_t = (matriz_binaria_sim > 0).sum()
+            denominador_espacial = puntos_reales_t + puntos_sim_t
+            score_espacial = (2.0 * interseccion / denominador_espacial) if denominador_espacial > 0 else 0.0
             
-            # 3. Fitness híbrido de la etapa
-            fit_etapa = (PESO_FRACTAL * fitness_fractal) + (PESO_IOU * iou)
+            # 3. Fitness híbrido de la etapa (50% Fractal + 50% Cobertura Eficiente Espacial)
+            fit_etapa = (PESO_FRACTAL * fitness_fractal) + (PESO_ESPACIAL * score_espacial)
             fitness_por_etapa.append(fit_etapa)
             
         # Promedio del fitness entre todas las transiciones diarias de esta simulación
@@ -240,9 +246,9 @@ def guardar_grafico_fitness(historial, ruta_salida='output/curva_fitness.png'):
         mejores_gen = [h['mejor_fitness_gen'] for h in historial]
         plt.plot(generaciones, mejores_gen, 'g--', alpha=0.35, linewidth=1.2, label='Mejor de la Generación')
     plt.plot(generaciones, promedios, 'b--s', linewidth=1.5, label='Fitness Promedio')
-    plt.title(f"Evolución del Fitness por Generación (Ponderación {PESO_FRACTAL}*Fractal + {PESO_IOU}*IoU)", fontsize=13, pad=15)
+    plt.title(f"Evolución del Fitness por Generación ({PESO_FRACTAL*100:.0f}% Fractal + {PESO_ESPACIAL*100:.0f}% F1-Espacial)", fontsize=13, pad=15)
     plt.xlabel("Generación", fontsize=12)
-    plt.ylabel(f"Fitness Híbrido ({PESO_FRACTAL}*Fractal + {PESO_IOU}*IoU)", fontsize=12)
+    plt.ylabel(f"Fitness Híbrido ({PESO_FRACTAL}*Fractal + {PESO_ESPACIAL}*F1_Espacial)", fontsize=12)
     plt.ylim(0.0, 1.0)
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.legend(fontsize=11)
@@ -284,7 +290,8 @@ def guardar_csv_resultados(historial, mejor_individuo, mejor_fitness):
         writer.writerow(['Humedad_Relativa', f"{mejor_individuo[2]:.2f}", "%"])
         writer.writerow(['Carga_Combustible', f"{mejor_individuo[3]:.3f}", "índice (0.1-1.0)"])
         writer.writerow(['Peso_Fractal_Utilizado', f"{PESO_FRACTAL:.2f}", "ponderación"])
-        writer.writerow(['Peso_IoU_Utilizado', f"{PESO_IOU:.2f}", "ponderación"])
+        writer.writerow(['Peso_Espacial_F1_Utilizado', f"{PESO_ESPACIAL:.2f}", "ponderación"])
+        writer.writerow(['Peso_IoU_Utilizado', f"{PESO_IOU:.2f}", "alias retrocompatible"])
     print(f" -> Resultados finales de optimización exportados a: {ruta_resumen}")
 
 def ejecutar_algoritmo_genetico(entradas_matrices):
@@ -297,7 +304,7 @@ def ejecutar_algoritmo_genetico(entradas_matrices):
     print("="*60)
     print("INICIANDO OPTIMIZACIÓN INVERSA PARALELA POR ALGORITMO GENÉTICO")
     print(f"Configuración: {GENERACIONES} Generaciones | {TAMANO_POBLACION} Individuos ({NUM_ELITES} Élites) | {PASOS_POR_DIA} Pasos/Día")
-    print(f"Ponderación Fitness: {PESO_FRACTAL} * Dimensión Fractal + {PESO_IOU} * IoU Espacial")
+    print(f"Ponderación Fitness: {PESO_FRACTAL} * Dimensión Fractal + {PESO_ESPACIAL} * Cobertura Eficiente (F1-Dice)")
     print(f"Aceleración por Multiprocesamiento: {num_workers} núcleos CPU activos")
     print("="*60)
     

@@ -3,7 +3,7 @@
 ## 1. Propósito General del Módulo
 `algoritmo_genetico.py` implementa el núcleo de **Optimización Inversa Multitemporal por Computación Evolutiva**. Su objetivo primordial es inferir los parámetros microclimáticos y ambientales latentes (velocidad del viento, dirección azimutal, humedad relativa y carga de combustible) que gobernaron la propagación histórica de un incendio forestal registrado por satélites.
 
-Resuelve un problema inverso altamente no lineal y ruidoso utilizando un algoritmo genético acelerado por multiprocesamiento en paralelo, guiado por una **función de fitness híbrida** que combina la geometría fractal del perímetro con la métrica de superposición espacial directa (IoU).
+Resuelve un problema inverso altamente no lineal y ruidoso utilizando un algoritmo genético acelerado por multiprocesamiento en paralelo, guiado por una **función de fitness híbrida** que combina la geometría fractal del perímetro con la métrica de **cobertura eficiente espacial ($F_1$-Score / Sørensen-Dice)**.
 
 ---
 
@@ -24,7 +24,7 @@ Este módulo constituye la **Fase 2** del proyecto. Conecta los datos satelitale
         │  • Población: 32 cromosomas [V, θ, H, C]     │
         │  • Evaluación multinúcleo en paralelo       │
         │  • Monte Carlo (5 corridas por individuo)   │
-        │  • Fitness híbrido (50% Fractal + 50% IoU)  │
+        │  • Fitness híbrido (50% Fractal + 50% F1)   │
         │  • Selección por torneo (k=3), Cruce, Mut   │
         │  • Elitismo (top 4 individuos conservados)  │
         └──────────────────────┬──────────────────────┘
@@ -76,16 +76,18 @@ $$\vec{x} = [V_{\text{viento}}, \theta_{\text{viento}}, H_{\text{hum}}, C_{\text
 - $C_{\text{comb}} \in [0.1, 1.0]$
 
 ### Función de Aptitud Híbrida (Fitness):
-Para evitar que el algoritmo caiga en mínimos locales que reproduzcan la cantidad de área quemada sin respetar la forma geométrica ramificada (o viceversa), se formula un fitness balanceado:
-$$\text{Fitness} = w_{\text{fractal}} \cdot F_{\text{fractal}} + w_{\text{IoU}} \cdot \text{IoU}$$
-donde $w_{\text{fractal}} = 0.5$ y $w_{\text{IoU}} = 0.5$.
+Para evitar que el algoritmo caiga en mínimos locales que reproduzcan la cantidad de área quemada sin respetar la forma geométrica ramificada (o viceversa), se formula un fitness balanceado al 50/50:
+$$\text{Fitness} = w_{\text{fractal}} \cdot F_{\text{fractal}} + w_{\text{espacial}} \cdot \text{Score}_{\text{espacial}}$$
+donde $w_{\text{fractal}} = 0.5$ y $w_{\text{espacial}} = 0.5$.
 
 1. **Fitness Fractal:**
    $$F_{\text{fractal}} = \frac{1}{1 + |D_{\text{objetivo}} - D_{\text{simulado}}|}$$
-   Premia a los individuos cuyo frente de fuego tenga una dimensión fractal similar al contorno observado satelitalmente.
-2. **Superposición Espacial (IoU - Intersection over Union):**
-   $$\text{IoU} = \frac{|M_{\text{real}} \cap M_{\text{sim}}|}{|M_{\text{real}} \cup M_{\text{sim}}|}$$
-   Garantiza que el incendio se propague en la misma dirección y ubicación geográfica que el fenómeno real.
+   Premia a los individuos cuyo frente de fuego tenga una dimensión fractal ($D$) similar a la rugosidad observada satelitalmente.
+2. **Cobertura Eficiente Espacial ($F_1$-Score / Coeficiente de Sørensen-Dice):**
+   $$\text{Score}_{\text{espacial}} = 2 \cdot \frac{\text{Cobertura} \cdot \text{Precisión}}{\text{Cobertura} + \text{Precisión}} = \frac{2 \cdot |M_{\text{real}} \cap M_{\text{sim}}|}{|M_{\text{real}}| + |M_{\text{sim}}|}$$
+   - **Cobertura (Recall):** $\frac{|M_{\text{real}} \cap M_{\text{sim}}|}{|M_{\text{real}}|}$ — Premia cubrir los puntos de calor reales de la NASA.
+   - **Precisión (Pureza de Ruta):** $\frac{|M_{\text{real}} \cap M_{\text{sim}}|}{|M_{\text{sim}}|}$ — Penaliza severamente el desborde y la dispersión masiva fuera del cauce real.
+   - *Nota metodológica:* Esta métrica reemplazó al IoU rígido para eliminar el estancamiento numérico en $0.570$ causado por la doble penalización en expansiones temporales continuas. Ver análisis exhaustivo en [**`docs/Reestructuracion IoU.md`**](../../Reestructuracion%20IoU.md).
 
 ### Mitigación de Ruido Estocástico (Monte Carlo):
 Dado que el autómata celular es probabilístico, un individuo prometedor podría obtener un mal puntaje por una tirada aleatoria desfavorable. Para estabilizar el fitness, cada individuo se evalúa promediando los resultados de $N = 5$ simulaciones Monte Carlo independientes (`NUM_SIMULACIONES = 5`).

@@ -19,9 +19,8 @@ Este documento consolida las líneas de investigación, optimizaciones técnicas
 | **T2.3** | Autómata Celular | Pendiente topográfica (Rothermel / SRTM DEM) | ⏳ *Pendiente* | `automata_celular.py` | Aceleración en pendientes y relieve |
 | **T2.4** | Autómata Celular | Vectores de viento dinámico horario (ERA5-Land) | ⏳ *Pendiente* | `automata_celular.py`, `simulador_predictivo.py` | Variabilidad meteorológica horaria realista |
 | **T3.1** | Validación Científica | Validación fuera de muestra (*Walk-Forward*) | ⏳ *Pendiente* | `algoritmo_genetico.py`, `simulador_predictivo.py` | Evaluación ciega contra imágenes satelitales futuras |
-| **T3.2** | Validación Científica | Cobertura Eficiente ($F_1$-Dice) y Batería de Métricas | 🔄 *En Progreso (AG implementado)* | `algoritmo_genetico.py`, `docs/Reestructuracion IoU.md` | Superación del techo de fitness (0.57 -> 0.85) y precisión de trayectoria |
-| **T3.3** | Validación Científica | Estudio de Ablación (IoU solo vs Fractal vs Híbrido)| ⏳ *Pendiente* | `algoritmo_genetico.py` | Demostración de la ventaja del enfoque híbrido |
-| **T3.4** | Validación Científica | Comparación con estaciones meteorológicas (INTA) | ⏳ *Pendiente* | Análisis post-hoc | Validación física de variables inferidas |
+| **T3.2** | Validación Científica | Cobertura Eficiente ($F_1$-Dice) y Batería de Métricas | ✅ **Implementado (AG)** | `algoritmo_genetico.py`, `docs/Reestructuracion IoU.md` | Superación del techo de fitness (0.57 -> 0.85) y precisión de trayectoria |
+| **T3.3** | Validación Científica | Comparación con estaciones meteorológicas (INTA) | ⏳ *Pendiente* | Análisis post-hoc | Validación física de variables inferidas |
 | **T4.1** | Optimización Evolutiva | Algoritmo Genético Multiobjetivo (NSGA-II) | ⏳ *Pendiente* | `algoritmo_genetico.py` | Frente de Pareto no dominado ($f_1 = \text{IoU}, f_2 = F_{\text{fractal}}$) |
 | **T4.2** | Optimización Evolutiva | Operadores genéticos continuos (SBX / Polinomial) | ⏳ *Pendiente* | `algoritmo_genetico.py` | Búsqueda fina en espacio continuo |
 | **T4.3** | Optimización Evolutiva | Análisis de repetibilidad (30 réplicas y tests) | ⏳ *Pendiente* | Validación experimental | Significancia estadística formal para comités Q1/Q2 |
@@ -128,15 +127,7 @@ Esta sección representa el **núcleo obligatorio** exigido por los revisores pa
   - *Herramientas:* `numpy` vectorizado, `scipy.spatial.distance.directed_hausdorff`.
   - *Cómputo Adicional:* **Cero / Despreciable ($< 1 \text{ ms}$)**. El cálculo de $F_1$ opera directamente sobre sumas booleanas vectorizadas sin alterar la complejidad temporal.
 
-- [ ] **T3.3: Estudio de Ablación (*Ablation Study*)**
-  - *Diseño:* Ejecutar y comparar formalmente 3 experimentos completos:
-    1. **Modelo A (Solo IoU):** $w_{\text{IoU}} = 1.0, w_{\text{fractal}} = 0.0$.
-    2. **Modelo B (Solo Fractal):** $w_{\text{IoU}} = 0.0, w_{\text{fractal}} = 1.0$.
-    3. **Modelo Propuesto (Híbrido):** $w_{\text{IoU}} = 0.5, w_{\text{fractal}} = 0.5$.
-  - *Cómputo Adicional:* **$3\times$ el tiempo de optimización del AG**.
-    - *Tiempo estimado:* $3 \text{ corridas} \times \approx 1 \text{ min} = \mathbf{3 \text{ a } 5 \text{ minutos}}$ en una CPU de 6-8 núcleos. Totalmente accesible en una laptop estándar.
-
-- [ ] **T3.4: Comparación contra Datos Meteorológicos Reales (Ground Truth Climático)**
+- [ ] **T3.3: Comparación contra Datos Meteorológicos Reales (Ground Truth Climático)**
   - *Diseño:* Contrastar las variables inferidas por el AG (velocidad, dirección del viento y humedad) contra registros reales de estaciones meteorológicas del **INTA** en Corrientes (Mercedes, Bella Vista) o reanálisis ERA5-Land.
   - *Cómputo Adicional:* **Despreciable**. Análisis estadístico de correlación de Pearson y cálculo de Error Cuadrático Medio (RMSE) sobre series de tiempo escalares.
 
@@ -164,7 +155,6 @@ El AG actual implementa un algoritmo genético canónico con codificación real,
   - *Fundamento:* Los comités de revistas internacionales exigen demostrar significancia estadística (medias, desviaciones estándar, boxplots y tests de Wilcoxon o Kruskal-Wallis) sobre al menos 10 a 30 corridas independientes con distintas semillas (`random_state`).
   - *Cómputo Adicional:* **ALTO (El cuello de botella principal de un paper)**.
     - *Cálculo:* $30 \text{ réplicas} \times 1.5 \text{ min por corrida} = \mathbf{45 \text{ a } 60 \text{ minutos}}$ en una máquina de 8 núcleos.
-    - *Si se combina con Ablación (3 modelos $\times$ 30 réplicas):* $\approx \mathbf{2.5 \text{ a } 3 \text{ horas}}$ de cómputo batch continuado.
     - *Viabilidad:* Se puede dejar corriendo por la noche en una laptop convencional o ejecutarlo en un entorno en la nube gratuito (Google Colab / Kaggle Notebooks).
 
 ---
@@ -184,12 +174,10 @@ El AG actual implementa un algoritmo genético canónico con codificación real,
 | **T2.4: Viento Dinámico ERA5** | ⏳ *Pendiente* | CPU / I/O Disco | $+1 \text{ s}$ inicio | $+30 \text{ MB}$ |  Inmediata | No |
 | **T3.1: Out-of-Sample Test** | ⏳ *Pendiente* | CPU (Inferencia prospectiva) | $1 \text{ corrida} \approx 1 \text{ min}$ | $+20 \text{ MB}$ |  Muy viable | No |
 | **T3.2: Cobertura Eficiente F1-Dice**| ✅ **Implementado (AG)** | CPU (Álgebra matricial) | $< 1 \text{ ms}$ | $0 \text{ MB}$ |  Inmediata | No |
-| **T3.3: Estudio de Ablación (3x)**| ⏳ *Pendiente* | CPU Paralela (Multiprocessing)| $\approx 4 \text{ minutos}$ | $+150 \text{ MB}$ |  Muy viable | No |
-| **T3.4: Ground Truth Clima** | ⏳ *Pendiente* | CPU (Estadística SciPy) | $< 2 \text{ s}$ | $+20 \text{ MB}$ |  Inmediata | No |
+| **T3.3: Ground Truth Clima** | ⏳ *Pendiente* | CPU (Estadística SciPy) | $< 2 \text{ s}$ | $+20 \text{ MB}$ |  Inmediata | No |
 | **T4.1: Multiobjetivo NSGA-II** | ⏳ *Pendiente* | CPU (Sorting no dominado) | $\approx 6 \text{ a } 8 \text{ min}$ | $+250 \text{ MB}$ |  Muy viable | No |
 | **T4.2: Operadores SBX/Polinomial**| ⏳ *Pendiente* | CPU (Aritmética continua) | $0 \text{ s}$ | $0 \text{ MB}$ |  Inmediata | No |
 | **T4.3: 30 Réplicas Estadísticas**| ⏳ *Pendiente* | CPU Intensiva (30 corridas) | $\mathbf{45 \text{ a } 60 \text{ min}}$ | $+500 \text{ MB}$ |  Viable (dejar batch nocturno) | Opcional (Google Colab / Servidor aceleraría el lote) |
-| **Ablación Completa (3 $\times$ 30 réplicas)** | ⏳ *Pendiente* | CPU Intensiva (90 corridas) | $\mathbf{2.5 \text{ a } 3.5 \text{ horas}}$ | $+500 \text{ MB}$ | ⚠️ Demanda tiempo continuo | **Recomendado Google Colab / Kaggle / AWS** |
 
 ---
 
@@ -237,18 +225,17 @@ flowchart TD
 
     subgraph Fase_Congreso ["2. Fase Mediano Plazo (Paper de Congreso: CACIC / JAIIO / Argencon)"]
         F2_1["Validación Out-of-Sample (Predecir día T+1 real)"]
-        F2_2["Estudio de Ablación (F1 solo vs Fractal solo vs Híbrido)"]
-        F2_3["Dilatación calibrada a 1 iteración (~1.6 km) ✅"]
-        F2_4["Tabla cuantitativa de métricas (F1, IoU, Delta D)"]
-        F2_5["Costo de cómputo estimado: ~5 a 15 minutos en PC local"]
+        F2_2["Dilatación calibrada a 1 iteración (~1.6 km) ✅"]
+        F2_3["Tabla cuantitativa de métricas (F1, IoU, Delta D)"]
+        F2_4["Costo de cómputo estimado: ~5 a 10 minutos en PC local"]
     end
 
     subgraph Fase_Revista ["3. Fase Largo Plazo (Paper de Revista Internacional Q1/Q2)"]
         F3_1["Capa de combustible real IGN WFS ✅ (T2.1)"]
         F3_2["Mecanismo de saltación de pavesas (Spotting - T2.2)"]
         F3_3["Optimización Multiobjetivo NSGA-II (pymoo - T4.1)"]
-        F3_4["Comparación contra ERA5-Land o estaciones INTA (T3.4)"]
-        F3_5["30 Réplicas estadísticas completas (~2.5 a 3.5 horas de cómputo - T4.3)"]
+        F3_4["Comparación contra ERA5-Land o estaciones INTA (T3.3)"]
+        F3_5["30 Réplicas estadísticas completas (~45 a 60 min de cómputo - T4.3)"]
     end
 
     Fase_Inmediata --> Fase_Congreso --> Fase_Revista
@@ -257,5 +244,5 @@ flowchart TD
 ---
 
 ### Resumen Ejecutivo de Cómputo para la Presentación
-1. **Factibilidad Total en Hardware Doméstico:** Más del **$80\%$ de las mejoras científicas** (reducción de dilatación, combustible MapBiomas, métricas formales F1/IoU, validación fuera de muestra y estudio de ablación) añaden menos de 5 minutos de tiempo de cómputo total en una computadora personal estándar.
-2. **Cuello de Botella Estadístico:** La única tarea de alta demanda computacional es la ejecución de **réplicas estadísticas masivas** (30 corridas independientes por modelo para tests de significancia estadística, $\approx 3 \text{ horas}$), la cual puede solventarse fácilmente de forma desatendida durante la noche o mediante plataformas en la nube gratuitas como Google Colab.
+1. **Factibilidad Total en Hardware Doméstico:** Más del **$80\%$ de las mejoras científicas** (reducción de dilatación, combustible MapBiomas, métricas formales F1/IoU y validación fuera de muestra) añaden menos de 5 minutos de tiempo de cómputo total en una computadora personal estándar.
+2. **Cuello de Botella Estadístico:** La única tarea de alta demanda computacional es la ejecución de **réplicas estadísticas masivas** (30 corridas independientes para tests de significancia estadística, $\approx 45 \text{ a } 60 \text{ min}$), la cual puede solventarse fácilmente de forma desatendida durante la noche o mediante plataformas en la nube gratuitas como Google Colab.

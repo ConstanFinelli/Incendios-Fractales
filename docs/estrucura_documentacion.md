@@ -1,6 +1,6 @@
 # Protocolo y Estándar de Documentación del Proyecto (`estrucuradocumentacion.md`)
 
-Este documento establece la **guía obligatoria de documentación modular** para desarrolladores y agentes de inteligencia artificial que trabajen en este repositorio. 
+Este documento establece la **guía obligatoria de documentación modular** para desarrolladores y agentes de inteligencia artificial que trabajen en este repositorio.
 
 Se basa estrictamente en la convención ya implementada en la carpeta [`docs/files/`](files/) para los módulos del sistema.
 
@@ -21,6 +21,7 @@ Incendios-Fractales/
 ```
 
 ### Módulos ya documentados bajo esta norma (referencias de ejemplo):
+
 - [`docs/files/algoritmo_genetico/`](files/algoritmo_genetico/) (`algoritmo_genetico.md` y `functions.md`)
 - [`docs/files/automata_celular/`](files/automata_celular/) (`automata_celular.md` y `functions.md`)
 - [`docs/files/calcular_dimension_fractal/`](files/calcular_dimension_fractal/) (`calcular_dimension_fractal.md` y `functions.md`)
@@ -53,7 +54,7 @@ Este archivo responde a: **¿Qué hace el archivo?**, **¿Por qué existe?** y *
    - **Salidas:** Objetos retornados y artefactos generados en `output/` (`.png`, `.csv`, `.npy`).
 6. **`## 5. Dependencias y Librerías`**
    - Librerías estándar (`os`, `sys`, `csv`, `random`), científicas (`numpy`, `scipy`, `matplotlib`, `pandas`) y módulos internos importados.
-7. **`## 6. Fundamentos Matemáticos / Físicos`** *(si aplica)*
+7. **`## 6. Fundamentos Matemáticos / Físicos`** _(si aplica)_
    - Ecuaciones, probabilidades anisotrópicas, métricas de error o fórmulas utilizadas.
 
 ---
@@ -65,22 +66,25 @@ Este archivo responde a: **¿Qué funciones implementa?** y **¿Qué funciones e
 ### Estructura Obligatoria y Secciones:
 
 ### `## 1. Funciones Definidas en este Archivo`
+
 Por **cada una** de las funciones y métodos implementados en `<nombre_modulo>.py`:
-* **Ancla HTML y Encabezado:** `<a id="nombre_funcion"></a>` seguido de `### nombre_funcion(param1, param2=...)`
-* **Firma:** `- **Firma:** def nombre_funcion(...)`
-* **Descripción:** Explicación técnica de la lógica interna, manejo de matrices y casos límite.
-* **Parámetros:** Lista en viñetas detallando:
-  * `nombre_parametro` (*tipo*[, opcional]): Significado semántico, valores por defecto y rangos válidos.
-* **Retorno:** `- **Retorno:** tipo` con la descripción de la estructura devuelta.
+
+- **Ancla HTML y Encabezado:** `<a id="nombre_funcion"></a>` seguido de `### nombre_funcion(param1, param2=...)`
+- **Firma:** `- **Firma:** def nombre_funcion(...)`
+- **Descripción:** Explicación técnica de la lógica interna, manejo de matrices y casos límite.
+- **Parámetros:** Lista en viñetas detallando:
+  - `nombre_parametro` (_tipo_[, opcional]): Significado semántico, valores por defecto y rangos válidos.
+- **Retorno:** `- **Retorno:** tipo` con la descripción de la estructura devuelta.
 
 ---
 
 ### `## 2. Funciones y Constantes Importadas de Otros Módulos`
+
 Si el módulo realiza llamadas a funciones o utiliza constantes definidas en otros archivos `.py` del proyecto, **DEBE** incluir una tabla o lista de trazabilidad con la siguiente estructura:
 
-| Función / Constante Invocada | Módulo de Origen | Archivo de Documentación | Motivo de la Invocación |
-| :--- | :--- | :--- | :--- |
-| `nombre_funcion_externa` | `<modulo_origen>.py` | [`<modulo_origen>.md`](../<modulo_origen>/<modulo_origen>.md) | Razón técnica y funcional por la cual se utiliza en este módulo. |
+| Función / Constante Invocada | Módulo de Origen     | Archivo de Documentación                                      | Motivo de la Invocación                                          |
+| :--------------------------- | :------------------- | :------------------------------------------------------------ | :--------------------------------------------------------------- |
+| `nombre_funcion_externa`     | `<modulo_origen>.py` | [`<modulo_origen>.md`](../<modulo_origen>/<modulo_origen>.md) | Razón técnica y funcional por la cual se utiliza en este módulo. |
 
 > [!IMPORTANT]
 > **Enlace Markdown Relativo Obligatorio:** Siempre debe apuntar al archivo `<modulo_origen>.md` (o a su `functions.md#nombre_funcion` correspondiente) dentro de `docs/files/<modulo_origen>/`.
@@ -90,6 +94,7 @@ Si el módulo realiza llamadas a funciones o utiliza constantes definidas en otr
 ## 4. Guía Rápida para Agentes y Desarrolladores
 
 Al programar un nuevo archivo Python o modificar uno existente:
+
 1. **Nuevo archivo `.py`:** Crear inmediatamente `docs/files/<nombre>/<nombre>.md` y `docs/files/<nombre>/functions.md`.
 2. **Nueva función o cambio de parámetros:** Actualizar el `functions.md` correspondiente.
-3. **Nueva llamada entre módulos:** Agregar la fila correspondiente en la tabla de *Funciones Importadas* con su enlace relativo.
+3. **Nueva llamada entre módulos:** Agregar la fila correspondiente en la tabla de _Funciones Importadas_ con su enlace relativo.

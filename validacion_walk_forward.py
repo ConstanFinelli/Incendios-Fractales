@@ -2,9 +2,11 @@ import os
 import sys
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import ListedColormap, BoundaryNorm
 import csv
 
 from ver_mapa_filtrado import procesar_rango_fechas
@@ -15,11 +17,13 @@ from algoritmo_genetico import (
 )
 from automata_celular import _avanzar_pasos_AC
 from calcular_dimension_fractal import calcular_dimension_fractal_directa
+from visualizador_corrientes import cargar_geometria_corrientes, LAT_MIN, LAT_MAX, LON_MIN, LON_MAX
 
 def ejecutar_validacion_walk_forward(
     fechas_calibracion=['2022-02-16', '2022-02-17'],
     fechas_prueba=['2022-02-18', '2022-02-19', '2022-02-20'],
-    pasos_por_dia=PASOS_POR_DIA
+    pasos_por_dia=PASOS_POR_DIA,
+    mejores_variables=None
 ):
     """
     Ejecuta el protocolo científico de Validación Fuera de Muestra (Walk-Forward Validation)
@@ -44,25 +48,30 @@ def ejecutar_validacion_walk_forward(
     fechas_prueba_validas = [f for f in fechas_prueba if f in dict_rutas]
     
     if len(fechas_calib_validas) < 1 or len(fechas_prueba_validas) < 1:
-        print("Error: No se encontraron suficientes fechas válidas en la base satelital.")
+        print("Advertencia: No se encontraron suficientes fechas satelitales posteriores para la validación ciega.")
         return None
         
     print(f" -> Fechas de Calibración / Entrenamiento: {fechas_calib_validas}")
     print(f" -> Fechas de Prueba Ciega (+24h, +48h, +72h): {fechas_prueba_validas}")
     
     # 2. Fase de Calibración Inversa (Algoritmo Genético)
-    print("\n" + "-" * 75)
-    print("[PASO 2] Calibración Inversa: El AG optimiza variables sobre la ventana de entrenamiento...")
-    print("-" * 75)
-    entradas_calib = [(f, dict_rutas[f]) for f in fechas_calib_validas]
-    
-    mejores_variables = ejecutar_algoritmo_genetico(entradas_calib)
     if mejores_variables is None:
-        print("Error en la optimización del Algoritmo Genético.")
-        return None
+        print("\n" + "-" * 75)
+        print("[PASO 2] Calibración Inversa: El AG optimiza variables sobre la ventana de entrenamiento...")
+        print("-" * 75)
+        entradas_calib = [(f, dict_rutas[f]) for f in fechas_calib_validas]
+        mejores_variables = ejecutar_algoritmo_genetico(entradas_calib)
+        if mejores_variables is None:
+            print("Error en la optimización del Algoritmo Genético.")
+            return None
+    else:
+        print("\n" + "-" * 75)
+        print("[PASO 2] Utilizando variables microclimáticas ya calibradas por el AG...")
+        print("-" * 75)
+        entradas_calib = [(f, dict_rutas[f]) for f in fechas_calib_validas]
         
     viento_vel, viento_dir, humedad, combustible = mejores_variables
-    print(f"\n[CALIBRACIÓN FINALIZADA] Microclima Inferido por el AG:")
+    print(f"\n[CALIBRACIÓN DISPONIBLE] Microclima Calibrado por el AG:")
     print(f" • Velocidad Viento: {viento_vel:.2f} km/h")
     print(f" • Dirección Viento: {viento_dir:.2f}°")
     print(f" • Humedad Relativa: {humedad:.2f} %")
@@ -181,50 +190,61 @@ def ejecutar_validacion_walk_forward(
 
     # 4. Generación del Mapa Diagnóstico Espacial Multipanel (3 Filas x 3 Columnas)
     print("\n" + "-" * 75)
-    print("[PASO 4] Generando visualización científica multipanel de diagnóstico espacial...")
+    print("[PASO 4] Generando visualización científica cartográfica con mapa de Corrientes...")
     print("-" * 75)
     
     num_horizontes = len(resultados_horizontes)
-    fig, axes = plt.subplots(num_horizontes, 3, figsize=(18, 5.5 * num_horizontes))
+    gdf_corrientes = cargar_geometria_corrientes()
+    extent = [LON_MIN, LON_MAX, LAT_MIN, LAT_MAX]
+    
+    fig, axes = plt.subplots(num_horizontes, 3, figsize=(22, 6.8 * num_horizontes), dpi=300)
     if num_horizontes == 1:
         axes = np.array([axes])
         
-    cmap_sat = 'hot_r'
-    cmap_sim = 'inferno_r'
-    # Paleta Diagnóstico: [0: Intacto/Fondo, 1: Verde (VP), 2: Rojo (FP), 3: Naranja/Amarillo (FN)]
-    cmap_diag = ListedColormap(['#f8f9fa', '#28a745', '#dc3545', '#ffc107'])
+    cmap_err = ListedColormap(['#10b981', '#ef4444', '#f59e0b'])  # 1: VP Verde, 2: FP Rojo, 3: FN Ámbar
+    norm_err = BoundaryNorm([0.5, 1.5, 2.5, 3.5], 3)
     
     for row, res in enumerate(resultados_horizontes):
-        # Columna 1: Observación Satelital Real NASA
-        ax1 = axes[row, 0]
-        ax1.imshow(res['matriz_real'], cmap=cmap_sat, origin='lower', interpolation='nearest')
-        ax1.set_title(f"Verdad Satelital NASA ({res['fecha']})\nHorizonte {res['horizonte']} | D={res['d_real']:.3f}", fontsize=11, fontweight='bold')
-        ax1.axis('off')
+        ax1, ax2, ax3 = axes[row, 0], axes[row, 1], axes[row, 2]
         
-        # Columna 2: Predicción Prospectiva Ciega
-        ax2 = axes[row, 1]
-        ax2.imshow(res['matriz_sim'], cmap=cmap_sim, origin='lower', interpolation='nearest')
-        ax2.set_title(f"Predicción Ciega AC ({res['horas']}h)\nF1-Dice={res['f1_dice']:.3f} | D_sim={res['d_sim']:.3f}", fontsize=11, fontweight='bold')
-        ax2.axis('off')
+        # Renderizar base cartográfica de departamentos de Corrientes en los 3 ejes
+        for ax in (ax1, ax2, ax3):
+            if gdf_corrientes is not None:
+                gdf_corrientes.plot(ax=ax, color='#f1f5f9', edgecolor='#64748b', linewidth=0.75, zorder=1)
+            ax.set_xlim(LON_MIN - 0.1, LON_MAX + 0.1)
+            ax.set_ylim(LAT_MIN - 0.1, LAT_MAX + 0.1)
+            ax.set_xlabel("Longitud Oeste", fontsize=9.5)
+            ax.set_ylabel("Latitud Sur", fontsize=9.5)
+            ax.grid(True, linestyle=':', alpha=0.4, color='#94a3b8', zorder=2)
+            
+        # Columna 1: Observación Satelital Real NASA sobre Corrientes
+        m_real = np.ma.masked_where(res['matriz_real'] == 0, res['matriz_real'])
+        ax1.imshow(m_real, origin='lower', extent=extent, cmap=ListedColormap(['#dc2626']), alpha=0.88, zorder=3)
+        ax1.set_title(f"1. Verdad Satelital NASA ({res['fecha']})\nHorizonte {res['horizonte']} | D_real={res['d_real']:.3f}", fontsize=11.5, fontweight='bold', pad=8)
+        p_real = mpatches.Patch(color='#dc2626', label=f"Cicatriz Satelital ({res['fecha']})")
+        p_prov = mpatches.Patch(facecolor='#f1f5f9', edgecolor='#64748b', label='Provincia de Corrientes')
+        ax1.legend(handles=[p_prov, p_real], loc='lower right', fontsize=8.5)
         
-        # Columna 3: Mapa de Errores y Diagnóstico Espacial
-        ax3 = axes[row, 2]
-        ax3.imshow(res['matriz_error'], cmap=cmap_diag, origin='lower', interpolation='nearest')
-        ax3.set_title(f"Diagnóstico Espacial ({res['horizonte']})\nRecall={res['recall']*100:.1f}% | IoU={res['iou']*100:.1f}%", fontsize=11, fontweight='bold')
-        ax3.axis('off')
+        # Columna 2: Predicción Prospectiva Ciega sobre Corrientes
+        m_sim = np.ma.masked_where(res['matriz_sim'] == 0, res['matriz_sim'])
+        ax2.imshow(m_sim, origin='lower', extent=extent, cmap=ListedColormap(['#ea580c']), alpha=0.88, zorder=3)
+        ax2.set_title(f"2. Predicción Ciega AC ({res['horas']}h)\nF1-Dice={res['f1_dice']*100:.1f}% | D_sim={res['d_sim']:.3f}", fontsize=11.5, fontweight='bold', pad=8)
+        p_sim = mpatches.Patch(color='#ea580c', label=f"Avance Simulado (+{res['horas']}h)")
+        ax2.legend(handles=[p_prov, p_sim], loc='lower right', fontsize=8.5)
         
-        # Leyenda en la última fila
-        if row == num_horizontes - 1:
-            p_vp = mpatches.Patch(color='#28a745', label='Verdadero Positivo (Acierto Fuego)')
-            p_fp = mpatches.Patch(color='#dc3545', label='Falso Positivo (Sobreexpansión)')
-            p_fn = mpatches.Patch(color='#ffc107', label='Falso Negativo (Subestimación)')
-            p_vn = mpatches.Patch(color='#f8f9fa', label='Intacto (Terreno Libre)', ec='#ccc')
-            ax3.legend(handles=[p_vp, p_fp, p_fn, p_vn], loc='lower right', fontsize=9)
+        # Columna 3: Mapa de Diagnóstico Espacial y Errores
+        m_err = np.ma.masked_where(res['matriz_error'] == 0, res['matriz_error'])
+        ax3.imshow(m_err, origin='lower', extent=extent, cmap=cmap_err, norm=norm_err, alpha=0.92, zorder=3)
+        ax3.set_title(f"3. Diagnóstico Espacial ({res['horizonte']})\nRecall={res['recall']*100:.1f}% | Precision={res['precision']*100:.1f}% | IoU={res['iou']*100:.1f}%", fontsize=11.5, fontweight='bold', pad=8)
+        p_vp = mpatches.Patch(color='#10b981', label='Verdadero Positivo (Acierto Fuego)')
+        p_fp = mpatches.Patch(color='#ef4444', label='Falso Positivo (Sobreestimación)')
+        p_fn = mpatches.Patch(color='#f59e0b', label='Falso Negativo (Subestimación)')
+        ax3.legend(handles=[p_prov, p_vp, p_fp, p_fn], loc='lower right', fontsize=8.5)
             
     plt.suptitle(
-        f"Validación Fuera de Muestra (Walk-Forward) | Calibrado: {fechas_calib_validas[0]} a {fecha_base}\n"
-        f"Microclima Óptimo: Viento {viento_vel:.1f} km/h @ {viento_dir:.1f}° | Humedad {humedad:.1f}% | Comb {combustible:.2f}",
-        fontsize=13,
+        f"Validación Fuera de Muestra (Walk-Forward) sobre la Provincia de Corrientes\n"
+        f"Calibración Inicial: {fechas_calib_validas[0]} a {fecha_base} | Microclima Óptimo: Viento {viento_vel:.1f} km/h @ {viento_dir:.1f}° | Humedad {humedad:.1f}% | Comb {combustible:.2f}",
+        fontsize=13.5,
         fontweight='bold',
         y=0.995
     )

@@ -1,5 +1,7 @@
 import pandas as pd
 import geopandas as gpd
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
 import numpy as np

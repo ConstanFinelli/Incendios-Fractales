@@ -2,6 +2,8 @@ import numpy as np
 import random
 import os
 import csv
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from concurrent.futures import ProcessPoolExecutor
 from automata_celular import simular_incendio_AC, _avanzar_pasos_AC

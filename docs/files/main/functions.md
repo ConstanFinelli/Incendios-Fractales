@@ -3,7 +3,9 @@
 ## 1. Funciones Definidas en este Archivo
 
 <a id="main"></a>
+
 ### `main()`
+
 - **Firma:** `def main():`
 - **Descripción:** Punto de entrada principal y orquestador del sistema. Controla secuencialmente la recepción de entradas del usuario, el preprocesamiento de datos satelitales, la optimización inversa por algoritmo genético y la simulación predictiva cartográfica.
 - **Parámetros:** Ninguno (lee directamente de `input()` y parámetros por consola).
@@ -15,7 +17,8 @@
   4. Llama al subproceso de extracción satelital (`procesar_rango_fechas` o `procesar_fecha`), generando las matrices en `output/npy/` y las siluetas en `output/siluetas/`.
   5. Ejecuta la optimización inversa llamando a `ejecutar_algoritmo_genetico(datos_entrada)` para inferir las condiciones microclimáticas.
   6. Dispara la fase predictiva invocando `ejecutar_prediccion(...)`.
-  7. Imprime el resumen consolidado de las rutas de todos los artefactos generados en `output/`.
+  7. Ejecuta automáticamente la **Fase 4: Validación Fuera de Muestra** invocando `ejecutar_validacion_walk_forward(...)` para comparar la proyección contra las fotos satelitales reales de los 3 días siguientes (+24h, +48h, +72h).
+  8. Imprime el resumen consolidado de las rutas de todos los artefactos generados en `output/`.
 
 ---
 
@@ -24,23 +27,31 @@
 Este archivo no reimplementa lógica satelital, evolutiva ni cartográfica, sino que consume funciones definidas en otros módulos del proyecto:
 
 ### Provenientes de `ver_mapa_filtrado.py`:
+
 - **`procesar_rango_fechas(fecha_inicio, fecha_fin)`**:
-  - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/ver_mapa_filtrado/functions.md`](../ver_mapa_filtrado/functions.md).
-  - *Rol en `main.py`:* Procesa secuencialmente cada día del intervalo satelital, filtrando la región geográfica de Corrientes, dilatando a radio físico primario ($1$ iteración, $r \approx 1.6\text{ km}$) y preservando integralmente el 100% de los focos multicluster observados por la NASA.
+  - _Ubicación de la definición:_ Se encuentra definida y documentada en [`docs/files/ver_mapa_filtrado/functions.md`](../ver_mapa_filtrado/functions.md).
+  - _Rol en `main.py`:_ Procesa secuencialmente cada día del intervalo satelital, filtrando la región geográfica de Corrientes, dilatando a radio físico primario ($1$ iteración, $r \approx 1.6\text{ km}$) y preservando integralmente el 100% de los focos multicluster observados por la NASA.
 - **`procesar_fecha(fecha_elegida=None)`**:
-  - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/ver_mapa_filtrado/functions.md`](../ver_mapa_filtrado/functions.md).
-  - *Rol en `main.py`:* Procesa una única fecha cuando se requiere de forma aislada.
+  - _Ubicación de la definición:_ Se encuentra definida y documentada en [`docs/files/ver_mapa_filtrado/functions.md`](../ver_mapa_filtrado/functions.md).
+  - _Rol en `main.py`:_ Procesa una única fecha cuando se requiere de forma aislada.
 
 ### Provenientes de `algoritmo_genetico.py`:
+
 - **`ejecutar_algoritmo_genetico(entradas_matrices)`**:
-  - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/algoritmo_genetico/functions.md`](../algoritmo_genetico/functions.md).
-  - *Rol en `main.py`:* Ejecuta el ciclo evolutivo multinúcleo para encontrar la combinación óptima de viento, humedad y combustible.
-- **`PASOS_POR_DIA`** *(Constante de configuración)*:
-  - *Ubicación de la definición:* Documentada en [`docs/files/algoritmo_genetico/algoritmo_genetico.md`](../algoritmo_genetico/algoritmo_genetico.md).
-  - *Rol en `main.py`:* Define la calibración temporal del autómata celular (30 ciclos de simulación = 24 horas reales).
+  - _Ubicación de la definición:_ Se encuentra definida y documentada en [`docs/files/algoritmo_genetico/functions.md`](../algoritmo_genetico/functions.md).
+  - _Rol en `main.py`:_ Ejecuta el ciclo evolutivo multinúcleo para encontrar la combinación óptima de viento, humedad y combustible.
+- **`PASOS_POR_DIA`** _(Constante de configuración)_:
+  - _Ubicación de la definición:_ Documentada en [`docs/files/algoritmo_genetico/algoritmo_genetico.md`](../algoritmo_genetico/algoritmo_genetico.md).
+  - _Rol en `main.py`:_ Define la calibración temporal del autómata celular (30 ciclos de simulación = 24 horas reales).
 
 ### Provenientes de `simulador_predictivo.py`:
-- **`ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_POR_DIA)`**:
-  - *Ubicación de la definición:* Se encuentra definida y documentada en [`docs/files/simulador_predictivo/functions.md`](../simulador_predictivo/functions.md).
-  - *Rol en `main.py`:* Toma las variables inferidas por el AG y proyecta el avance del fuego a +24h, +48h y +72h, orquestando las salidas gráficas GIS y HTML.
 
+- **`ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_POR_DIA)`**:
+  - _Ubicación de la definición:_ Se encuentra definida y documentada en [`docs/files/simulador_predictivo/functions.md`](../simulador_predictivo/functions.md).
+  - _Rol en `main.py`:_ Toma las variables inferidas por el AG y proyecta el avance del fuego a +24h, +48h y +72h, orquestando las salidas gráficas GIS y HTML.
+
+### Provenientes de `validacion_walk_forward.py`:
+
+- **`ejecutar_validacion_walk_forward(fechas_calibracion, fechas_prueba, pasos_por_dia, mejores_variables)`**:
+  - _Ubicación de la definición:_ Se encuentra definida y documentada en [`docs/files/validacion_walk_forward/functions.md`](../validacion_walk_forward/functions.md).
+  - _Rol en `main.py`:_ Ejecuta la validación ciega prospectiva contra las observaciones satelitales reales de los 3 días posteriores, generando el diagnóstico espacial 3x3 y la tabla cuantitativa de métricas.

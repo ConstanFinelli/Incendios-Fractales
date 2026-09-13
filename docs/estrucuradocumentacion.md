@@ -1,14 +1,14 @@
-# Protocolo y Estructura Estándar de Documentación del Proyecto (`estrucuradocumentacion.md`)
+# Protocolo y Estándar de Documentación del Proyecto (`estrucuradocumentacion.md`)
 
-Este documento define la **norma obligatoria y estándar de documentación** para todos los desarrolladores y agentes de inteligencia artificial que colaboren en el proyecto. 
+Este documento establece la **guía obligatoria de documentación modular** para desarrolladores y agentes de inteligencia artificial que trabajen en este repositorio. 
 
-Su propósito es garantizar una trazabilidad arquitectónica completa, modular, navegable y coherente entre el código fuente en Python y los documentos explicativos.
+Se basa estrictamente en la convención ya implementada en la carpeta [`docs/files/`](files/) para los módulos del sistema.
 
 ---
 
-## 1. Regla Fundamental de Organización de Archivos
+## 1. Regla de Organización de Archivos
 
-Por cada archivo fuente Python (`<nombre_modulo>.py`) presente en la raíz del proyecto, **DEBE** existir una carpeta homónima dentro del directorio `docs/files/`:
+Por cada archivo de código fuente Python (`<nombre_modulo>.py`) presente en el proyecto, **DEBE existir obligatoriamente una carpeta homónima dentro de `docs/files/`**, la cual contendrá exactamente **dos archivos Markdown**:
 
 ```
 Incendios-Fractales/
@@ -16,110 +16,80 @@ Incendios-Fractales/
 └── docs/
     └── files/
         └── <nombre_modulo>/
-            ├── <nombre_modulo>.md     <-- Documento 1: Descripción y Justificación
-            └── functions.md          <-- Documento 2: Catálogo de Funciones y Referencias
+            ├── <nombre_modulo>.md     <-- Documento 1: Propósito, Justificación y Arquitectura
+            └── functions.md          <-- Documento 2: Catálogo de Funciones y Referencias Cruzadas
 ```
+
+### Módulos ya documentados bajo esta norma (referencias de ejemplo):
+- [`docs/files/algoritmo_genetico/`](files/algoritmo_genetico/) (`algoritmo_genetico.md` y `functions.md`)
+- [`docs/files/automata_celular/`](files/automata_celular/) (`automata_celular.md` y `functions.md`)
+- [`docs/files/calcular_dimension_fractal/`](files/calcular_dimension_fractal/) (`calcular_dimension_fractal.md` y `functions.md`)
+- [`docs/files/capa_biomasa/`](files/capa_biomasa/) (`capa_biomasa.md` y `functions.md`)
+- [`docs/files/ver_mapa_filtrado/`](files/ver_mapa_filtrado/) (`ver_mapa_filtrado.md` y `functions.md`)
+- [`docs/files/simulador_predictivo/`](files/simulador_predictivo/) (`simulador_predictivo.md` y `functions.md`)
+- [`docs/files/validacion_walk_forward/`](files/validacion_walk_forward/) (`validacion_walk_forward.md` y `functions.md`)
+- [`docs/files/main/`](files/main/) (`main.md` y `functions.md`)
 
 ---
 
-## 2. Documento 1: `<nombre_modulo>.md` (Descripción y Justificación)
+## 2. Documento 1: `<nombre_modulo>.md` (Propósito, Justificación y Arquitectura)
 
-Este archivo responde a las preguntas: **¿Qué hace este archivo?**, **¿Por qué existe?** y **¿Cómo interactúa con el resto del sistema?**.
+Este archivo responde a: **¿Qué hace el archivo?**, **¿Por qué existe?** y **¿Cuál es su rol en el sistema?**.
 
-### Estructura Obligatoria:
+### Estructura Obligatoria y Secciones:
 
-1. **Título del Módulo:** `# Documentación: <nombre_modulo>.py`
-2. **Propósito General:** Explicación conceptual y técnica de la responsabilidad del archivo.
-3. **Justificación de su Existencia:**
-   * ¿Qué problema puntual resuelve?
-   * ¿Por qué existe como un archivo independiente en lugar de estar integrado en otro módulo?
-   * ¿Qué ventajas de modularidad, mantenimiento o separación de responsabilidades aporta?
-4. **Rol en la Arquitectura del Sistema:**
-   * En qué fase del pipeline interviene (Fase 1: Preprocesamiento Satelital, Fase 2: Optimización Inversa AG, Fase 3: Predicción Prospectiva, Fase 4: Validación Científica).
-   * Diagrama esquemático (ASCII o Mermaid) del flujo de datos.
-5. **Entradas y Salidas:**
-   * **Entradas:** Parámetros de entrada, tipos de datos, archivos leídos (`.json`, `.csv`, `.npy`, etc.).
-   * **Salidas:** Estructuras retornadas, artefactos persistidos en disco (`output/*.png`, `output/*.csv`, matrices `.npy`).
-6. **Dependencias y Librerías:** Librerías estándar, científicas (`numpy`, `scipy`, `matplotlib`, `pandas`) y módulos locales importados.
+1. **Título Principal:** `# Documentación: <nombre_modulo>.py`
+2. **`## 1. Propósito General del Módulo`**
+   - Descripción conceptual y funcional de lo que implementa el archivo.
+3. **`## 2. Justificación de su Existencia`**
+   - **Problema puntual que resuelve:** Qué necesidad técnica, biofísica o algorítmica atiende.
+   - **Motivo de separación:** Por qué constituye un archivo `.py` independiente y no fue colocado dentro de otro módulo.
+   - **Ventajas de diseño:** Beneficios de modularidad, testeabilidad aislada, paralelización o mantenimiento.
+4. **`## 3. Rol en la Arquitectura del Sistema`**
+   - Fase del pipeline en la que interviene (Fase 1: Preprocesamiento, Fase 2: Inversión AG, Fase 3: Predicción, Fase 4: Validación).
+   - Diagrama esquemático en ASCII o Mermaid ilustrando el flujo de datos.
+5. **`## 4. Entradas y Salidas`**
+   - **Entradas:** Parámetros por consola/función, archivos consumidos (`.json`, `.npy`, `.csv`).
+   - **Salidas:** Objetos retornados y artefactos generados en `output/` (`.png`, `.csv`, `.npy`).
+6. **`## 5. Dependencias y Librerías`**
+   - Librerías estándar (`os`, `sys`, `csv`, `random`), científicas (`numpy`, `scipy`, `matplotlib`, `pandas`) y módulos internos importados.
+7. **`## 6. Fundamentos Matemáticos / Físicos`** *(si aplica)*
+   - Ecuaciones, probabilidades anisotrópicas, métricas de error o fórmulas utilizadas.
 
 ---
 
 ## 3. Documento 2: `functions.md` (Catálogo de Funciones y Referencias Cruzadas)
 
-Este archivo responde a las preguntas: **¿Qué funciones define este archivo?** y **¿Qué funciones externas invoca y dónde están documentadas?**.
+Este archivo responde a: **¿Qué funciones implementa?** y **¿Qué funciones externas invoca y dónde están documentadas?**.
 
-### Estructura Obligatoria:
+### Estructura Obligatoria y Secciones:
 
-### Sección 1: Funciones Definidas en este Archivo
-Para **cada una** de las funciones y métodos implementados en `<nombre_modulo>.py`:
-* **Nombre y Firma:** `### nombre_funcion(param1, param2, ...)`
-* **Motivo y Descripción:** Explicación detallada de la lógica algorítmica, consideraciones matemáticas/físicas y decisiones de diseño.
-* **Parámetros:** Lista detallada indicando:
-  * `nombre_parametro` (*tipo*): Significado semántico, valores por defecto y rangos admisibles.
-* **Retorno:** Tipo de dato retornado (`float`, `np.ndarray`, `tuple`, `None`, etc.) y descripción de su contenido.
-
-### Sección 2: Funciones Invocadas desde Otros Módulos (Trazabilidad Cruzada)
-Si el módulo realiza llamadas a funciones definidas en otros archivos `.py` del proyecto, **DEBE** incluir una tabla o lista de trazabilidad que indique:
-* **Función Invocada:** Nombre de la función llamada.
-* **Módulo de Origen:** Archivo `.py` donde reside la función.
-* **Enlace a la Documentación:** Enlace relativo markdown al `<modulo_origen>.md` (o `functions.md` del módulo) donde está definida y explicada formalmente.
-* **Motivo de la Invocación:** Por qué se requiere esa función externa en este flujo.
+### `## 1. Funciones Definidas en este Archivo`
+Por **cada una** de las funciones y métodos implementados en `<nombre_modulo>.py`:
+* **Ancla HTML y Encabezado:** `<a id="nombre_funcion"></a>` seguido de `### nombre_funcion(param1, param2=...)`
+* **Firma:** `- **Firma:** def nombre_funcion(...)`
+* **Descripción:** Explicación técnica de la lógica interna, manejo de matrices y casos límite.
+* **Parámetros:** Lista en viñetas detallando:
+  * `nombre_parametro` (*tipo*[, opcional]): Significado semántico, valores por defecto y rangos válidos.
+* **Retorno:** `- **Retorno:** tipo` con la descripción de la estructura devuelta.
 
 ---
 
-## 4. Plantillas de Referencia para Agentes
+### `## 2. Funciones y Constantes Importadas de Otros Módulos`
+Si el módulo realiza llamadas a funciones o utiliza constantes definidas en otros archivos `.py` del proyecto, **DEBE** incluir una tabla o lista de trazabilidad con la siguiente estructura:
 
-### Plantilla para `<nombre_modulo>.md`:
-```markdown
-# Documentación: `<nombre_modulo>.py`
-
-## 1. Propósito General del Módulo
-[Descripción técnica y conceptual del módulo]
-
-## 2. Justificación de su Existencia
-- **Problema que resuelve:** [Problema específico]
-- **Motivo de separación:** [Por qué es un módulo independiente]
-- **Ventajas de diseño:** [Modularidad, testeabilidad, paralelismo, etc.]
-
-## 3. Rol en la Arquitectura del Sistema
-[Explicación del rol y diagrama de flujo]
-
-## 4. Entradas y Salidas
-- **Entradas:** [Formatos y tipos]
-- **Salidas:** [Objetos y archivos generados]
-
-## 5. Dependencias
-- [Librerías externas y módulos internos]
-```
-
-### Plantilla para `functions.md`:
-```markdown
-# Funciones de `<nombre_modulo>.py`
-
-## 1. Funciones Definidas en este Archivo
-
-### `nombre_funcion(param1, param2=default)`
-- **Firma:** `def nombre_funcion(param1, param2=default):`
-- **Descripción:** [Explicación detallada]
-- **Parámetros:**
-  - `param1` (*tipo*): [Descripción]
-  - `param2` (*tipo*, opcional): [Descripción]
-- **Retorno:** `tipo` - [Descripción del retorno]
-
----
-
-## 2. Funciones Invocadas desde Otros Módulos
-
-| Función Invocada | Módulo de Origen | Archivo de Documentación | Motivo de la Invocación |
+| Función / Constante Invocada | Módulo de Origen | Archivo de Documentación | Motivo de la Invocación |
 | :--- | :--- | :--- | :--- |
-| `otra_funcion` | `otro_modulo.py` | [`otro_modulo.md`](../otro_modulo/otro_modulo.md) | [Razón del uso] |
-```
+| `nombre_funcion_externa` | `<modulo_origen>.py` | [`<modulo_origen>.md`](../<modulo_origen>/<modulo_origen>.md) | Razón técnica y funcional por la cual se utiliza en este módulo. |
+
+> [!IMPORTANT]
+> **Enlace Markdown Relativo Obligatorio:** Siempre debe apuntar al archivo `<modulo_origen>.md` (o a su `functions.md#nombre_funcion` correspondiente) dentro de `docs/files/<modulo_origen>/`.
 
 ---
 
-## 5. Regla de Sincronización para Modificaciones de Código
+## 4. Guía Rápida para Agentes y Desarrolladores
 
-Siempre que un desarrollador o agente:
-1. **Cree un nuevo archivo `.py`:** Debe crear inmediatamente su carpeta `docs/files/<nuevo_modulo>/` con sus dos archivos `.md`.
-2. **Modifique una función existente o agregue una nueva:** Debe actualizar inmediatamente el `functions.md` correspondiente.
-3. **Agregue una dependencia o llamada a otro módulo:** Debe registrar la referencia cruzada con el enlace al `.md` del módulo importado.
+Al programar un nuevo archivo Python o modificar uno existente:
+1. **Nuevo archivo `.py`:** Crear inmediatamente `docs/files/<nombre>/<nombre>.md` y `docs/files/<nombre>/functions.md`.
+2. **Nueva función o cambio de parámetros:** Actualizar el `functions.md` correspondiente.
+3. **Nueva llamada entre módulos:** Agregar la fila correspondiente en la tabla de *Funciones Importadas* con su enlace relativo.

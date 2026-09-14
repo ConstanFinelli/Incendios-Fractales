@@ -30,52 +30,52 @@ En lugar de intentar "adivinar" el clima para simular el fuego, el proyecto plan
 
 Para que el modelo computacional sea fiel a las leyes de la física y a la ecología de los incendios forestales, el sistema adopta una serie de convenciones rigurosamente fundamentadas:
 
-### 3.1. Dirección del Viento en Grados Sexagesimales (\(0^\circ - 360^\circ\))
+### 2.1. Dirección del Viento en Grados Sexagesimales ($0^\circ - 360^\circ$)
 
-- **Estándar Meteorológico (Rosa de los Vientos):** En las estaciones del INTA y sensores oficiales, la dirección del viento se mide en grados de azimut (\(0^\circ / 360^\circ = \text{Norte}\), \(90^\circ = \text{Este}\), \(180^\circ = \text{Sur}\), \(270^\circ = \text{Oeste}\)). Esto permite contrastar directamente las variables inferidas por el AG contra los registros climáticos históricos de febrero de 2022.
-- **Espacio Continuo para el AG:** Permite al Algoritmo Genético afinar el ángulo con precisión decimal continua (ej. \(181.4^\circ\)) en lugar de limitarse a 4 u 8 puntos cardinales discretos.
-- **Modelado Trigonométrico en el Autómata Celular:** Para cada celda vecina en la vecindad de Moore, se calcula el ángulo geométrico hacia ella (\(\theta*{\text{vecino}} = \text{arctan2}(-dy, dx)\)) y se evalúa la alineación con el viento mediante el coseno:
-  $$\text{alineacion} = \cos(\theta*{\text{viento}} - \theta*{\text{vecino}})$$
-  $$\text{Factor Viento} = e^{c \cdot v*{\text{viento}} \cdot \text{alineacion}}$$
-  - A favor del viento (\(\Delta\theta = 0^\circ, \cos=1\)): Máxima aceleración y probabilidad (\(e^{+c \cdot v}\)).
-  - Perpendicular (\(\Delta\theta = 90^\circ, \cos=0\)): Propagación lateral neutra (\(e^0 = 1\)).
-  - En contra (\(\Delta\theta = 180^\circ, \cos=-1\)): Fuerte resistencia al avance (\(e^{-c \cdot v}\)).
+- **Estándar Meteorológico (Rosa de los Vientos):** En las estaciones del INTA y sensores oficiales, la dirección del viento se mide en grados de azimut ($0^\circ / 360^\circ = \text{Norte}$, $90^\circ = \text{Este}$, $180^\circ = \text{Sur}$, $270^\circ = \text{Oeste}$). Esto permite contrastar directamente las variables inferidas por el AG contra los registros climáticos históricos de febrero de 2022.
+- **Espacio Continuo para el AG:** Permite al Algoritmo Genético afinar el ángulo con precisión decimal continua (ej. $181.4^\circ$) en lugar de limitarse a 4 u 8 puntos cardinales discretos.
+- **Modelado Trigonométrico en el Autómata Celular:** Para cada celda vecina en la vecindad de Moore, se calcula el ángulo geométrico hacia ella ($\theta_{\text{vecino}} = \operatorname{atan2}(-dy, dx)$) y se evalúa la alineación con el viento mediante el coseno:
+  $$\text{alineacion} = \cos(\theta_{\text{viento}} - \theta_{\text{vecino}})$$
+  $$\text{Factor Viento} = e^{c \cdot v_{\text{viento}} \cdot \text{alineacion}}$$
+  - A favor del viento ($\Delta\theta = 0^\circ, \cos=1$): Máxima aceleración y probabilidad ($e^{+c \cdot v}$).
+  - Perpendicular ($\Delta\theta = 90^\circ, \cos=0$): Propagación lateral neutra ($e^0 = 1$).
+  - En contra ($\Delta\theta = 180^\circ, \cos=-1$): Fuerte resistencia al avance ($e^{-c \cdot v}$).
 
 ---
 
-### 3.2. Rango de Velocidad del Viento (\(0 - 50\text{ km/h}\))
+### 2.2. Rango de Velocidad del Viento ($0 - 50\text{ km/h}$)
 
-- **Evidencia Meteorológica Real (Corrientes 2022):** En los registros históricos del INTA para enero-febrero de 2022, los vientos medios sostenidos oscilaron entre \(15\) y \(35\text{ km/h}\), mientras que las ráfagas máximas críticas alcanzaron picos de \(45\) a \(55\text{ km/h}\). Vientos sostenidos superiores a \(50\text{ km/h}\) corresponden a temporales severos (Escala Beaufort 7 a 8), sumamente atípicos en días secos y despejados sin tormenta. El rango \([0, 50]\) cubre el \(99.9\%\) de las condiciones reales del desastre.
+- **Evidencia Meteorológica Real (Corrientes 2022):** En los registros históricos del INTA para enero-febrero de 2022, los vientos medios sostenidos oscilaron entre $15$ y $35\text{ km/h}$, mientras que las ráfagas máximas críticas alcanzaron picos de $45$ a $55\text{ km/h}$. Vientos sostenidos superiores a $50\text{ km/h}$ corresponden a temporales severos (Escala Beaufort 7 a 8), sumamente atípicos en días secos y despejados sin tormenta. El rango $[0, 50]$ cubre el $99.9\%$ de las condiciones reales del desastre.
 - **Saturación Matemática en el Autómata Celular:** En la ecuación del AC, el factor del viento crece exponencialmente:
   $$\text{Factor Viento} = e^{0.05 \cdot v_{\text{viento}} \cdot \cos(\Delta\theta)}$$
-  A \(v = 50\text{ km/h}\), el factor multiplicador a favor del viento es \(e^{2.5} \approx 12.18\times\), lo que satura la probabilidad de ignición al tope máximo permitido por el simulador (\(95\%\)). Permitir velocidades mayores (ej. \(80-100\text{ km/h}\)) crearía una "zona ciega" donde el AG no podría distinguir entre valores porque todos producirían exactamente el mismo avance saturado al \(95\%\), perdiendo gradiente de optimización.
-- **Resolución Espacial y Estabilidad:** En una grilla de \(256 \times 256\) donde cada celda representa \(\sim 2-3\text{ km}\), una velocidad de \(50\text{ km/h}\) permite avanzar \(60-90\text{ km/día}\) en 30 pasos de simulación, coincidiendo con la tasa de expansión récord real y evitando que el frente escape o se desborde fuera de la matriz.
+  A $v = 50\text{ km/h}$, el factor multiplicador a favor del viento es $e^{2.5} \approx 12.18\times$, lo que satura la probabilidad de ignición al tope máximo permitido por el simulador ($95\%$). Permitir velocidades mayores (ej. $80 - 100\text{ km/h}$) crearía una "zona ciega" donde el AG no podría distinguir entre valores porque todos producirían exactamente el mismo avance saturado al $95\%$, perdiendo gradiente de optimización.
+- **Resolución Espacial y Estabilidad:** En una grilla de $256 \times 256$ donde cada celda representa $\sim 1.57\text{ km}$, una velocidad de $50\text{ km/h}$ permite avanzar $60 - 90\text{ km/día}$ en 30 pasos de simulación, coincidiendo con la tasa de expansión récord real y evitando que el frente escape o se desborde fuera de la matriz.
 
 ---
 
-### 3.3. Rango de Humedad Relativa (\(10\% - 80\%\))
+### 2.3. Rango de Humedad Relativa ($10\% - 80\%$)
 
-- **Límite Inferior (\(10\%\)):** Representa el escenario de sequía extrema y ola de calor crítica durante el fenómeno de _La Niña_ en Corrientes 2022. Humedades menores son físicamente inexistentes en el bioma de humedales y pastizales del litoral.
-- **Límite Superior (\(80\%\) - Humedad de Extinción):** En ciencias forestales, cuando la humedad ambiente supera el \(75\%-80\%\), la vegetación absorbe tanta agua que la combustión no puede autosostenerse: **el fuego se extingue naturalmente**. Explorar humedades mayores en el AG sería inviable porque el fuego moriría en el primer paso.
-- **Efecto Matemático:** El factor de sequedad en el AC se calcula como \((1.0 - \text{humedad}/100) \in [0.20, 0.90]\).
+- **Límite Inferior ($10\%$):** Representa el escenario de sequía extrema y ola de calor crítica durante el fenómeno de _La Niña_ en Corrientes 2022. Humedades menores son físicamente inexistentes en el bioma de humedales y pastizales del litoral.
+- **Límite Superior ($80\%$ - Humedad de Extinción):** En ciencias forestales, cuando la humedad ambiente supera el $75\% - 80\%$, la vegetación absorbe tanta agua que la combustión no puede autosostenerse: **el fuego se extingue naturalmente**. Explorar humedades mayores en el AG sería inviable porque el fuego moriría en el primer paso.
+- **Efecto Matemático:** El factor de sequedad en el AC se calcula como $(1.0 - \text{humedad}/100) \in [0.20, 0.90]$.
 
 ---
 
-### 3.4. Rango de Combustible (\(0.1 - 1.0\)) y Distinción entre Nivel Local vs. Global
+### 2.4. Rango de Combustible ($0.1 - 1.0$) y Distinción entre Nivel Local vs. Global
 
 Es fundamental distinguir entre el combustible a nivel local (celda por celda) y el gen de combustible a nivel macro (Algoritmo Genético):
 
 1. **Combustible Local (Celda puntual) — SÍ puede y debe llegar a 0:**
-   - Cuando la vegetación de una celda se quema por completo, pasa a **Cenizas (Estado 2)**. Al convertirse en ceniza, su combustible local se agota (\(=0\)) y queda inerte para siempre.
-   - Cuerpos de agua (ríos, lagunas del Iberá) o cortafuegos tienen combustible local \(=0\) y actúan como barreras infranqueables.
-2. **Combustible Global (Gen del AG) — NO puede ser 0 (\(0.1 - 1.0\)):**
-   - El gen del cromosoma representa la **densidad y tipo de biomasa macroscópica de todo el ecosistema de la región** (pastizales densos \(=1.0\), monte ralo \(=0.4\), etc.).
-   - Si el gen fuera \(0.0\), significaría que en las 65.536 celdas del mapa no existe ni una sola brizna de pasto en ningún lado (un desierto estéril o mar abierto), en cuyo caso el incendio real detectado por el satélite nunca habría podido existir.
-   - El piso de \(0.1\) asegura que siempre exista un mínimo de vegetación para evaluar la dinámica geométrica.
+   - Cuando la vegetación de una celda se quema por completo, pasa a **Cenizas (Estado 2)**. Al convertirse en ceniza, su combustible local se agota ($= 0$) y queda inerte para siempre.
+   - Cuerpos de agua (ríos, lagunas del Iberá) o cortafuegos tienen combustible local $= 0$ y actúan como barreras infranqueables.
+2. **Combustible Global (Gen del AG) — NO puede ser 0 ($0.1 - 1.0$):**
+   - El gen del cromosoma representa la **densidad y tipo de biomasa macroscópica de todo el ecosistema de la región** (pastizales densos $= 1.0$, monte ralo $= 0.4$, etc.).
+   - Si el gen fuera $0.0$, significaría que en las 65.536 celdas del mapa no existe ni una sola brizna de pasto en ningún lado (un desierto estéril o mar abierto), en cuyo caso el incendio real detectado por el satélite nunca habría podido existir.
+   - El piso de $0.1$ asegura que siempre exista un mínimo de vegetación para evaluar la dinámica geométrica.
 
 ---
 
-### 3.5. Estados de Celda en el Autómata Celular y el Rol de las Cenizas
+### 2.5. Estados de Celda en el Autómata Celular y el Rol de las Cenizas
 
 El simulador implementa 3 estados físicos:
 
@@ -90,7 +90,7 @@ El simulador implementa 3 estados físicos:
 3. **Continuidad multitemporal día a día:** Lo que se quemó el Día 1 pasa a ser ceniza inerte el Día 2; el fuego del Día 2 solo avanza sobre la vegetación verde que aún rodea el perímetro.
 4. **Medición Fractal:** El área total afectada ($1+2$) permite extraer el perímetro exterior exacto de la cicatriz satelital mediante Box-Counting.
 
-#### 3.5.1. Definición Formal del Paso de Simulación ($\Delta t$ y Discretización Espacio-Temporal)
+#### 2.5.1. Definición Formal del Paso de Simulación ($\Delta t$ y Discretización Espacio-Temporal)
 
 Un **paso de simulación** (o iteración de reloj del Autómata Celular) es la unidad discreta fundamental de avance temporal y dinámico del frente de fuego en el modelo. Se define formalmente bajo tres dimensiones interconectadas:
 
@@ -112,7 +112,7 @@ Un **paso de simulación** (o iteración de reloj del Autómata Celular) es la u
 
 ---
 
-### 3.6. Delimitación Territorial, Georreferenciación y Resolución Espacial de Corrientes
+### 2.6. Delimitación Territorial, Georreferenciación y Resolución Espacial de Corrientes
 
 Para conectar las simulaciones fractales teóricas con la gestión operativa y territorial del riesgo, el sistema define un sistema de georreferenciación estricto sobre la provincia de Corrientes:
 
@@ -127,10 +127,10 @@ Para conectar las simulaciones fractales teóricas con la gestión operativa y t
   - **Área representada por cada píxel:** Aproximadamente $1.57 \times 1.61 \approx 2.53\text{ km}^2$ ($253\text{ hectáreas}$). Esta resolución es ideal porque captura tanto los grandes frentes de fuego como las lagunas y parches del macrosistema Iberá sin degradar el rendimiento del autómata celular.
 
 - **Fórmulas de Transformación Espacial Bidireccional:**
-  1. _De coordenadas geográficas (lat, lon) a índices de celda $(i, j)$:_
+  1. _De coordenadas geográficas ($\text{lat}, \text{lon}$) a índices de celda $(i, j)$:_
      $$i = \text{clip}\left(\left\lfloor \frac{\text{lat} - \text{LAT}_{\min}}{\text{LAT}_{\max} - \text{LAT}_{\min}} \cdot (N - 1) \right\rfloor, 0, N - 1\right) \quad (\text{Fila / Latitud})$$
      $$j = \text{clip}\left(\left\lfloor \frac{\text{lon} - \text{LON}_{\min}}{\text{LON}_{\max} - \text{LON}_{\min}} \cdot (N - 1) \right\rfloor, 0, N - 1\right) \quad (\text{Columna / Longitud})$$
-  2. _De índices de celda $(i, j)$ a coordenadas geográficas (lat, lon):_
+  2. _De índices de celda $(i, j)$ a coordenadas geográficas ($\text{lat}, \text{lon}$):_
      $$\text{lat}(i) = \text{LAT}_{\min} + \frac{i}{N - 1} (\text{LAT}_{\max} - \text{LAT}_{\min})$$
      $$\text{lon}(j) = \text{LON}_{\min} + \frac{j}{N - 1} (\text{LON}_{\max} - \text{LON}_{\min})$$
 
@@ -139,7 +139,7 @@ Para conectar las simulaciones fractales teóricas con la gestión operativa y t
 
 ---
 
-### 3.7. Principales Decisiones de Diseño, Arquitectura y Cartografía
+### 2.7. Principales Decisiones de Diseño, Arquitectura y Cartografía
 
 El desarrollo del visualizador cartográfico y la integración del pipeline involucran una serie de decisiones clave:
 
@@ -214,7 +214,7 @@ El desarrollo del visualizador cartográfico y la integración del pipeline invo
 
 ---
 
-### 3.8. Fundamentación Científica y Operativa de los Horizontes Predictivos (24h, 48h, 72h)
+### 2.8. Fundamentación Científica y Operativa de los Horizontes Predictivos (24h, 48h, 72h)
 
 La extensión del sistema predictivo a los tres horizontes de **$+24\text{ horas}$ (30 pasos)**, **$+48\text{ horas}$ (60 pasos)** y **$+72\text{ horas}$ (90 pasos)** responde a una fundamentación rigurosa desde la física atmosférica, la gestión de catástrofes y la metodología de publicación científica:
 

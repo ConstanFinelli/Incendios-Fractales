@@ -126,7 +126,8 @@ Para conectar las simulaciones fractales teóricas con la gestión operativa y t
   - En el eje de longitud: $\Delta \text{lon} = \frac{4.2^\circ}{255} \approx 0.0165^\circ \approx 1.61\text{ km por celda}$ (evaluado a la latitud media de $-29^\circ$).
   - **Área representada por cada píxel:** Aproximadamente $1.57 \times 1.61 \approx 2.53\text{ km}^2$ ($253\text{ hectáreas}$). Esta resolución es ideal porque captura tanto los grandes frentes de fuego como las lagunas y parches del macrosistema Iberá sin degradar el rendimiento del autómata celular.
 
-- **Fórmulas de Transformación Espacial Bidireccional:**
+- **Fórmulas de Transformación Espacial Bidireccional ($N = 256$ celdas de lado):**
+  Donde $N$ es la **resolución espacial de la matriz cuadrada** ($N = 256$, con índices discretos de fila y columna $i, j \in [0, N - 1] = [0, 255]$):
   1. _De coordenadas geográficas ($\text{lat}, \text{lon}$) a índices de celda $(i, j)$:_
      $$i = \text{clip}\left(\left\lfloor \frac{\text{lat} - \text{LAT}_{\min}}{\text{LAT}_{\max} - \text{LAT}_{\min}} \cdot (N - 1) \right\rfloor, 0, N - 1\right) \quad (\text{Fila / Latitud})$$
      $$j = \text{clip}\left(\left\lfloor \frac{\text{lon} - \text{LON}_{\min}}{\text{LON}_{\max} - \text{LON}_{\min}} \cdot (N - 1) \right\rfloor, 0, N - 1\right) \quad (\text{Columna / Longitud})$$

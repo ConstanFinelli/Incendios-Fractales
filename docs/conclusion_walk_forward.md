@@ -1,6 +1,5 @@
 # Informe Científico: Validación Fuera de Muestra (_Walk-Forward Validation_) a 3 Horizontes (+24h, +48h y +72h)
 
-**Tarea Asociada:** T3.1 (_Walk-Forward Validation / Blind Testing_)  
 **Estado:** ✅ **Completado e Implementado**  
 **Módulo Ejecutable:** [`validacion_walk_forward.py`](../validacion_walk_forward.py)  
 **Entregables Generados:**

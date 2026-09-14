@@ -1,7 +1,7 @@
 # Módulo: `capa_biomasa.py`
 
 ## 1. Propósito y Responsabilidad del Módulo
-El módulo `capa_biomasa.py` implementa la **heterogeneidad espacial biofísica** del terreno en la provincia de Corrientes (Tarea T2.1). Modela la variación en la carga de combustible y resistencia al avance del fuego según el tipo de cobertura del suelo, superando la limitación de modelar un combustible escalar homogéneo en toda la provincia.
+El módulo `capa_biomasa.py` implementa la **heterogeneidad espacial biofísica** del terreno en la provincia de Corrientes. Modela la variación en la carga de combustible y resistencia al avance del fuego según el tipo de cobertura del suelo, superando la limitación de modelar un combustible escalar homogéneo en toda la provincia.
 
 ## 2. Fuentes de Datos Geoespaciales Oficiales
 El módulo consume directamente capas vectoriales oficiales del **Instituto Geográfico Nacional (IGN)** de la República Argentina a través de sus geoservicios WFS (`EPSG:4326`):

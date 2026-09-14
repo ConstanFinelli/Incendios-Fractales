@@ -54,7 +54,7 @@ def cargar_datos_serie_temporal(entradas):
             
         matriz_dia = np.load(ruta)
         matriz_real = matriz_dia.copy()
-        # T1.5: Dimensión fractal directa sobre el frente activo multicluster del día
+        # Dimensión fractal directa sobre el frente activo multicluster del día
         D_real = calcular_dimension_fractal_directa(matriz_real)
             
         datos_serie.append({
@@ -81,7 +81,7 @@ def generar_individuo():
 def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES, mapa_combustible=None):
     """
     Evalúa la aptitud de un individuo contra la serie temporal satelital real.
-    Incorpora la capa raster de cobertura de suelo y biomasa real (Tarea T2.1).
+    Incorpora la capa raster de cobertura de suelo y biomasa real.
     
     Principio físico-metodológico:
       El punto de partida de la simulación son siempre las celdas correspondientes
@@ -162,7 +162,7 @@ def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_PO
             
             matriz_binaria_sim = np.where(grilla_sim > 0, 1, 0)
             
-            # 1. Fitness Fractal del día t (Directo sobre frente activo T1.5)
+            # 1. Fitness Fractal del día t (Directo sobre frente activo)
             D_sim_t = calcular_dimension_fractal_directa(matriz_binaria_sim)
             error_fractal = abs(D_objetivo_t - D_sim_t)
             fitness_fractal = 1.0 / (1.0 + error_fractal)
@@ -312,7 +312,7 @@ def ejecutar_algoritmo_genetico(entradas_matrices):
     if len(datos_serie) > 1:
         print(f"Se evaluarán {len(datos_serie) - 1} transiciones diarias continuas ({PASOS_POR_DIA} pasos AC cada una).")
     
-    # 2. Inicializar población y mapa de combustible biofísico (Tarea T2.1)
+    # 2. Inicializar población y mapa de combustible biofísico
     tamano = datos_serie[0]['matriz'].shape[0] if len(datos_serie) > 0 else 256
     try:
         from capa_biomasa import obtener_mapa_combustible

@@ -8,7 +8,7 @@ def _avanzar_pasos_AC(grilla, viento_vel, viento_dir, humedad, combustible, paso
     """
     Función interna optimizada para avanzar el autómata celular n pasos en el tiempo.
     Itera únicamente sobre las celdas activas (Estado 1) para alto rendimiento.
-    Incorpora heterogeneidad espacial biofísica real mediante mapa_combustible (Tarea T2.1).
+    Incorpora heterogeneidad espacial biofísica real mediante mapa_combustible.
     """
     if mapa_combustible is None:
         try:
@@ -63,7 +63,7 @@ def simular_incendio_AC(viento_vel, viento_dir, humedad, combustible, pasos_tiem
     """
     Simulador de Autómata Celular Estocástico para Incendios Forestales.
     Estados de celda: 0 = Intacta, 1 = Ardiendo, 2 = Quemada (Cenizas).
-    Acepta mapa_combustible para heterogeneidad espacial biofísica (Tarea T2.1).
+    Acepta mapa_combustible para heterogeneidad espacial biofísica.
     """
     # 1. Inicializar la grilla
     if grilla_inicial is not None:
@@ -91,7 +91,7 @@ def simular_evolucion_multietapa(viento_vel, viento_dir, humedad, combustible, g
     """
     Simula la evolución continua del fuego a lo largo de múltiples etapas (días).
     Retorna la lista de matrices binarias simuladas en cada etapa para su comparación día a día.
-    Acepta mapa_combustible para heterogeneidad espacial biofísica (Tarea T2.1).
+    Acepta mapa_combustible para heterogeneidad espacial biofísica.
     """
     grilla = np.copy(grilla_inicial).astype(int)
     if np.max(grilla) == 1:

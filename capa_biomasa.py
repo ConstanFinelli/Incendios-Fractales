@@ -5,7 +5,7 @@ Módulo: capa_biomasa.py
 Responsabilidad:
   Generación, almacenamiento y carga de la capa raster de cobertura de suelo
   y biomasa real (heterogeneidad espacial) de la provincia de Corrientes
-  para el Autómata Celular y el Algoritmo Genético (Tarea T2.1).
+  para el Autómata Celular y el Algoritmo Genético.
 
 Categorías Biofísicas:
   - 1: Cuerpos de agua y esteros profundos      -> C = 0.0 (Incombustible)
@@ -124,7 +124,7 @@ def cargar_o_generar_mapa_combustible(tamano=TAMANO_GRID, recalcular=False):
         except Exception:
             pass
 
-    print("\nGenerando Capa Raster de Cobertura de Suelo y Biomasa (Tarea T2.1)...")
+    print("\nGenerando Capa Raster de Cobertura de Suelo y Biomasa...")
     descargar_capas_ign_si_faltan()
     
     # 1. Cargar máscara provincial
@@ -286,7 +286,7 @@ def generar_mapa_cobertura_grafico(tamano=TAMANO_GRID, ruta_salida=os.path.join(
 
     # Título institucional
     ax.set_title(
-        "PROVINCIA DE CORRIENTES - MAPA DE COBERTURA DE SUELO Y BIOMASA (TAREA T2.1)\n"
+        "PROVINCIA DE CORRIENTES - MAPA DE COBERTURA DE SUELO Y BIOMASA\n"
         "Heterogeneidad Espacial para Modelado Físico en Autómata Celular (IGN Argentina)",
         fontsize=11, fontweight='bold', pad=12, color='#1a252f'
     )
@@ -303,7 +303,7 @@ def generar_mapa_cobertura_grafico(tamano=TAMANO_GRID, ruta_salida=os.path.join(
     
     ax.legend(
         handles=legend_elements, loc='lower right', frameon=True, facecolor='white',
-        edgecolor='#95a5a6', framealpha=0.95, fontsize=8, title="Clasificación Biofísica de Combustible (T2.1)",
+        edgecolor='#95a5a6', framealpha=0.95, fontsize=8, title="Clasificación Biofísica de Combustible",
         title_fontsize=8.5
     )
 

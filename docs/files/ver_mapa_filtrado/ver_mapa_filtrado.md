@@ -67,11 +67,11 @@ $$r_i = \left\lfloor \frac{\text{lat}_i - \text{LAT\_MIN}}{\text{LAT\_MAX} - \te
 $$c_i = \left\lfloor \frac{\text{lon}_i - \text{LON\_MIN}}{\text{LON\_MAX} - \text{LON\_MIN}} \times (N - 1) \right\rfloor$$
 Ambos índices se truncan con `np.clip` al rango $[0, N-1]$.
 
-### 2. Dilatación Morfológica Física Calibrada (T1.1):
+### 2. Dilatación Morfológica Física Calibrada:
 Para representar físicamente el radio de dispersión térmica y salto de pavesas primarias (*short-range spotting*) entre frentes cercanos, se aplica una dilatación binaria iterativa con un elemento estructurante de vecindad $3 \times 3$ acotada a **1 iteración** (`ITERACIONES_DILATACION = 1`):
 $$A \oplus B = \bigcup_{b \in B} A_b$$
 Esto genera un radio de influencia de $\approx 1.57\text{ km}$ (cruz simétrica de 5 celdas por foco), evitando sobredimensionar artificialmente el área de quema o puentear canales hídricos de la capa de biomasa de Corrientes.
 
-### 3. Preservación Integral Multi-Cluster (T1.2):
+### 3. Preservación Integral Multi-Cluster:
 Se erradicó la antigua limitación del cluster único (`argmax`) que borraba frentes activos en otras regiones de la provincia. Asimismo, tras comprobarse que todo punto dilatado supera las 5 celdas (lo que volvía redundante cualquier corte de masa crítica conexa post-dilatación), la matriz dilatada se adopta directamente como verdad de terreno, garantizando que el **100% de las observaciones satelitales validadas por la NASA** estén disponibles para la optimización inversa y la proyección predictiva.
 

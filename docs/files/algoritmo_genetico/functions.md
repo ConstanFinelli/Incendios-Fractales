@@ -7,7 +7,7 @@
 ### `cargar_datos_serie_temporal(entradas)`
 
 - **Firma:** `def cargar_datos_serie_temporal(entradas):`
-- **Descripción:** Carga desde el disco una o varias matrices satelitales (`.npy`) generadas en la Fase 1 en modo **instantáneo puro** (frentes activos de cada día sin acumulación histórica), y computa previamente la Dimensión Fractal real ($D_{\text{real}}$) de cada día evaluando directamente el frente activo mediante `calcular_dimension_fractal_directa` (T1.5), sin necesidad de erosión forzada.
+- **Descripción:** Carga desde el disco una o varias matrices satelitales (`.npy`) generadas en la Fase 1 en modo **instantáneo puro** (frentes activos de cada día sin acumulación histórica), y computa previamente la Dimensión Fractal real ($D_{\text{real}}$) de cada día evaluando directamente el frente activo mediante `calcular_dimension_fractal_directa`, sin necesidad de erosión forzada.
 - **Parámetros:**
   - `entradas` (str o list): Ruta de un único archivo `.npy` o lista de tuplas `[(fecha, ruta), ...]`.
 - **Retorno:** `list` de diccionarios con la estructura:
@@ -42,7 +42,7 @@
 ### `evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES, mapa_combustible=None)`
 
 - **Firma:** `def evaluar_fitness_multitemporal(individuo, datos_serie, pasos_por_dia=PASOS_POR_DIA, num_simulaciones=NUM_SIMULACIONES, mapa_combustible=None):`
-- **Descripción:** Evalúa la calidad de un individuo en $num\_simulaciones$ réplicas Monte Carlo bajo el principio físico de expansión desde celdas iniciales, integrando la heterogeneidad espacial biofísica (T2.1):
+- **Descripción:** Evalúa la calidad de un individuo en $num\_simulaciones$ réplicas Monte Carlo bajo el principio físico de expansión desde celdas iniciales, integrando la heterogeneidad espacial biofísica:
   - **Punto de Partida Físico ($T_0$):** El autómata celular se inicializa siempre con **todas las celdas activas correspondientes a los puntos de calor del día de inicio**, sin forzar su colapso a un baricentro único.
   - **Evolución Multitemporal hacia los demás días:** Para cada transición temporal ($T_{k-1} \to T_k$), avanza la grilla continua `pasos_por_dia` pasos (30 ciclos) usando `_avanzar_pasos_AC` modulado por el mapa de combustible raster, expandiéndose hacia las demás zonas y midiendo la concordancia híbrida (50% Dimensión Fractal directa $D$ + 50% Cobertura Eficiente Espacial $F_1$-Dice) contra la foto satelital real del día $T_k$. Promedia las aptitudes de todas las etapas.
   - **Caso de 1 solo día:** Si se suministra una sola fecha, la simulación arranca igualmente desde todas las celdas de calor reales observadas en dicha fecha y avanza `pasos_por_dia` pasos, contrastando la preservación fractal y cobertura eficiente $F_1$-Dice.
@@ -167,7 +167,7 @@
   - _Rol en `algoritmo_genetico.py`:_ Computa la dimensión fractal $D$ para comparar el grado de ramificación entre la realidad y la simulación.
 - **`calcular_dimension_fractal_directa`**:
   - _Ubicación de la definición:_ Se encuentra definida y documentada en [`docs/files/calcular_dimension_fractal/functions.md`](../calcular_dimension_fractal/functions.md).
-  - _Rol en `algoritmo_genetico.py`:_ Evalúa directamente la dimensión fractal $D$ sobre el frente activo multicluster sin necesidad de erosión morfológica intermedia (T1.5).
+  - _Rol en `algoritmo_genetico.py`:_ Evalúa directamente la dimensión fractal $D$ sobre el frente activo multicluster sin necesidad de erosión morfológica intermedia.
 
 ### Provenientes de `ver_mapa_filtrado.py`:
 
@@ -179,4 +179,4 @@
 
 - **`obtener_mapa_combustible`**:
   - _Ubicación de la definición:_ Se encuentra definida y documentada en [`docs/files/capa_biomasa/functions.md`](../capa_biomasa/functions.md).
-  - _Rol en `algoritmo_genetico.py`:_ Carga o sintetiza la matriz 2D de susceptibilidad biofísica de Corrientes (IGN WFS) para inyectar heterogeneidad espacial en la evaluación paralela del autómata celular durante la optimización genética (T2.1).
+  - _Rol en `algoritmo_genetico.py`:_ Carga o sintetiza la matriz 2D de susceptibilidad biofísica de Corrientes (IGN WFS) para inyectar heterogeneidad espacial en la evaluación paralela del autómata celular durante la optimización genética.

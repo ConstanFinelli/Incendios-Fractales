@@ -84,7 +84,7 @@ El programa te solicitará las fechas a analizar:
 - 🗺️ **`output/mapa_riesgo_predictivo.png`**: Matriz comparativa de riesgo isócrono del autómata celular (4 paneles en alta resolución a 300 DPI: Focos Activos Base, Predicción +24h Táctica, Predicción +48h Preventiva y Predicción +72h Estratégica).
 - 📍 **`output/mapa_corrientes_prediccion.png`**: Figura cartográfica GIS (300 DPI) estructurada en 4 paneles horizontales georreferenciados sobre los 25 departamentos de Corrientes, con rótulos de texto protegidos por halo blanco (`path_effects`).
 - 🌐 **`output/mapa_corrientes_interactivo.html`**: Mapa web interactivo de Corrientes desarrollado en Folium con teselas conmutables (**CartoDB Positron**, **OpenStreetMap**, **Satélite Esri World Imagery**), tooltips por departamento y capas conmutables autónomas en Base64 para cada horizonte temporal (+24h, +48h, +72h e Isócronas).
-- 🌿 **`output/mapa_cobertura_combustible.png`**: Mapa de cobertura vegetal y susceptibilidad de combustible biofísico derivado del geoservicio WFS del IGN con 4 clases ecológicas (Tarea T2.1).
+- 🌿 **`output/mapa_cobertura_combustible.png`**: Mapa de cobertura vegetal y susceptibilidad de combustible biofísico derivado del geoservicio WFS del IGN con 4 clases ecológicas.
 - 💾 **`output/npy/matriz_objetivo_limpia_AAAA-MM-DD.npy`**: Subcarpeta de matrices binarias satelitales filtradas de la NASA (VIIRS/MODIS).
 - 🖼️ **`output/siluetas/silueta_fractal_limpia_AAAA-MM-DD.png`**: Subcarpeta de siluetas fractales procesadas.
 
@@ -99,7 +99,7 @@ Incendios-Fractales/
 ├── algoritmo_genetico.py            # Optimización inversa multitemporal (Fase 2)
 ├── calcular_dimension_fractal.py    # Extracción de perímetro y Box-Counting (D)
 ├── automata_celular.py              # Motor físico de simulación de incendios
-├── capa_biomasa.py                  # Capa de biomasa y combustible IGN WFS (Tarea T2.1)
+├── capa_biomasa.py                  # Capa de biomasa y combustible IGN WFS
 ├── simulador_predictivo.py          # Proyección de riesgo preventivo (Fase 3)
 ├── validacion_walk_forward.py       # Protocolo científico de validación ciega fuera de muestra
 ├── visualizador_corrientes.py       # Cartografía departamental de Corrientes (Fase 4)
@@ -108,7 +108,6 @@ Incendios-Fractales/
 │   ├── DOCUMENTACION_COMPLETA_PROYECTO.md  # Manual exhaustivo y catálogo de funciones
 │   ├── conclusion_walk_forward.md          # Informe científico del protocolo Walk-Forward
 │   ├── estrucura_documentacion.md          # Guía y estándar de documentación del repositorio
-│   ├── non_implemented_plans/              # Planes archivados para fases futuras
 │   └── files/                              # Especificación modular detallada por componente
 └── output/                                 # Mapas, matrices e informes generados
     ├── npy/                                # Matrices binarias satelitales (.npy)

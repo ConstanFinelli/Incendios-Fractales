@@ -15,7 +15,7 @@ Este módulo suministra la métrica morfométrica clave que fundamenta el proyec
             │
             ├─────────────────────────────────────────┐
             ▼                                         ▼
-    extraer_perimetro()                      Cálculo Directo (T1.5)
+    extraer_perimetro()                      Cálculo Directo
  (Erosión morfológica defensiva)          (Polvos fractales / Frentes)
             │                                         │
             ▼                                         ▼
@@ -72,7 +72,7 @@ Posteriormente, se ajusta un polinomio de grado 1 (`np.polyfit`) sobre los pares
 $$\ln N(\epsilon) = D \cdot \ln(1/\epsilon) + c$$
 La pendiente del ajuste resultante es la dimensión fractal $D$.
 
-### Validez Matemática sobre Conjuntos Dispersos (Polvos Fractales - T1.5):
+### Validez Matemática sobre Conjuntos Dispersos (Polvos Fractales):
 La formulación de Box-Counting de Minkowski-Bouligand no exige que el objeto geométrico sea un continuo simplemente conexo. Es formalmente aplicable a cualquier conjunto acotado no vacío en $\mathbb{R}^2$, incluidos conjuntos desconectados, multifocales o polvos fractales (*Cantor dust*). Al aplicar Box-Counting directamente sobre el conjunto de celdas activas (`matriz_binaria > 0`):
 1. Se cuantifica la dispersión espacial y rugosidad multiescala de los frentes de fuego reales.
 2. Se eliminan artefactos de borde derivados de la erosión en estructuras de 1 píxel.

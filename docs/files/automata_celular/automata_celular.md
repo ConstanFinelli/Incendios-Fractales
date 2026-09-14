@@ -52,7 +52,7 @@ Este módulo es el motor computacional de simulación física del proyecto y es 
 ## 4. Dependencias y Librerías
 - **Cálculo numérico y aleatorio:** `numpy`.
 - **Graficación y mapas de color:** `matplotlib.pyplot`, `matplotlib.colors.ListedColormap`.
-- **Heterogeneidad espacial (T2.1):** `capa_biomasa.obtener_mapa_combustible`.
+- **Heterogeneidad espacial:** `capa_biomasa.obtener_mapa_combustible`.
 
 ---
 
@@ -64,7 +64,7 @@ Cada celda $(y, x)$ de la grilla $256 \times 256$ adopta en cada paso temporal $
 - **Estado 1 (Ardiendo / Frente activo):** Celda en proceso activo de combustión y emisión térmica.
 - **Estado 2 (Quemada / Cenizas):** Biomasa consumida; no puede reencenderse ni propagar fuego.
 
-### Modelo Físico de Propagación con Heterogeneidad Espacial (T2.1):
+### Modelo Físico de Propagación con Heterogeneidad Espacial:
 La probabilidad base de ignición $P_{\text{base}}$ depende de la carga local de combustible según el tipo de cobertura biofísica y de la humedad relativa $H \in [0, 1]$:
 $$C_{\text{local}}(y, x) = M_{\text{comb}}(y, x) \cdot c_{\text{global}}$$
 $$P_{\text{base}}(y, x) = C_{\text{local}}(y, x) \cdot (1 - H)$$

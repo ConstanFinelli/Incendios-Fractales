@@ -18,7 +18,7 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
       - 48 horas (+60 pasos | Nivel Preventivo: evacuación y cortafuegos pesados)
       - 72 horas (+90 pasos | Nivel Estratégico: gestión territorial y reservas)
     Genera un mapa de riesgo isócrono acumulativo y orquesta la transposición espacial.
-    Incorpora la capa raster de cobertura de suelo y biomasa real de Corrientes (Tarea T2.1).
+    Incorpora la capa raster de cobertura de suelo y biomasa real de Corrientes.
     """
     viento_vel, viento_dir, humedad, combustible = mejores_variables
     
@@ -56,7 +56,7 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
     print(f"Horizontes de Simulación: +24h ({pasos_por_dia} ciclos) | +48h ({pasos_por_dia*2} ciclos) | +72h ({pasos_por_dia*3} ciclos)")
     print(f"Condiciones Microclimáticas Inferidas: Viento {viento_vel:.1f}km/h @ {viento_dir:.1f}° | Humedad {humedad:.1f}% | Comb {combustible:.2f}")
     
-    # Cargar mapa de combustible biofísico heterogéneo (Tarea T2.1)
+    # Cargar mapa de combustible biofísico heterogéneo
     mapa_combustible = obtener_mapa_combustible(tamano)
     
     # Simulación encadenada continua en 3 etapas sucesivas de 24 horas cada una:
@@ -181,7 +181,7 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
         traceback.print_exc()
         print(f"Advertencia al proyectar mapa de Corrientes: {e}")
         
-    # Generar visualización del mapa de cobertura y combustible biofísico (Tarea T2.1)
+    # Generar visualización del mapa de cobertura y combustible biofísico
     try:
         generar_mapa_cobertura_grafico(tamano)
     except Exception as e:

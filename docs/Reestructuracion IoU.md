@@ -3,7 +3,6 @@
 **Fecha:** Septiembre 2026  
 **Módulo:** `algoritmo_genetico.py`  
 **Estado:** Implementado y Validado  
-**Referencia de Tarea:** T3.2 — Función de Aptitud Multiobjetivo y Resolución de Cuello de Botella  
 
 ---
 
@@ -26,7 +25,7 @@ La función de aptitud se definía originalmente como una combinación convexa:
 $$\text{Fitness} = 0.50 \cdot F_{\text{fractal}} + 0.50 \cdot \text{IoU}$$
 
 Donde:
-- $F_{\text{fractal}} = \frac{1}{1 + |D_{\text{real}} - D_{\text{sim}}|}$, siendo $D$ la Dimensión Fractal calculada mediante box-counting directo sobre el frente activo multicluster (Tarea T1.5).
+- $F_{\text{fractal}} = \frac{1}{1 + |D_{\text{real}} - D_{\text{sim}}|}$, siendo $D$ la Dimensión Fractal calculada mediante box-counting directo sobre el frente activo multicluster.
 - $\text{IoU} = \frac{|M_{\text{real}} \cap M_{\text{sim}}|}{|M_{\text{real}} \cup M_{\text{sim}}|}$, evaluado entre la máscara binaria satelital acumulada al día $T+1$ y la cicatriz simulada tras 30 pasos de autómata celular.
 
 ### 2.2. La Anomalía del Techo en $\approx 0.570$

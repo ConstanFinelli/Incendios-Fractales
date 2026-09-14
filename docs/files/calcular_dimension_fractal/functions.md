@@ -30,7 +30,7 @@
 <a id="calcular_dimension_fractal_directa"></a>
 ### `calcular_dimension_fractal_directa(matriz_binaria)`
 - **Firma:** `def calcular_dimension_fractal_directa(matriz_binaria):`
-- **Descripción:** Función de conveniencia optimizada (T1.5) que calcula de forma directa la dimensión fractal de Box-Counting $D$ sobre el conjunto de celdas activas de una matriz binaria, omitiendo el paso de erosión morfológica. Ideal para frentes de fuego multifocales y conjuntos dispersos.
+- **Descripción:** Función de conveniencia optimizada que calcula de forma directa la dimensión fractal de Box-Counting $D$ sobre el conjunto de celdas activas de una matriz binaria, omitiendo el paso de erosión morfológica. Ideal para frentes de fuego multifocales y conjuntos dispersos.
 - **Parámetros:**
   - `matriz_binaria` (`numpy.ndarray` 2D): Matriz binaria con las celdas encendidas.
 - **Retorno:** `float` con la dimensión fractal $D$. Retorna `0.0` si la grilla está vacía o `1.0` en caso de fallo numérico.

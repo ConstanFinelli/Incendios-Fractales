@@ -60,7 +60,7 @@ def calcular_dimension_fractal_directa(matriz_binaria):
     """
     Calcula de forma directa la Dimensión Fractal de Box-Counting (D) sobre el conjunto
     de celdas activas (frentes de fuego) sin necesidad de erosión morfológica previa.
-    Especialmente diseñado para frentes multifocales y polvos fractales en R^2 (T1.5).
+    Especialmente diseñado para frentes multifocales y polvos fractales en R^2.
     """
     if not np.any(matriz_binaria):
         return 0.0

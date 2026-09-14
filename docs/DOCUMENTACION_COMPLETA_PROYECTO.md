@@ -30,32 +30,40 @@ En lugar de intentar "adivinar" el clima para simular el fuego, el proyecto plan
 
 ```mermaid
 flowchart TD
-    subgraph FASE 1: Preprocesamiento Satelital
-        A["JSON NASA FIRMS (VIIRS/MODIS)"] --> B["ver_mapa_filtrado.py\n(Recorte Corrientes + Dilatación Física 1 iter ~1.6 km)"]
-        B --> C["Serie de Matrices Binarias 256x256 (.npy)\n[T0, T1, ..., Tk]"]
+    subgraph FASE_1 ["FASE 1: Preprocesamiento Satelital"]
+        A["🛰️ JSON NASA FIRMS (VIIRS/MODIS)"] --> B["ver_mapa_filtrado.py<br/>(Recorte Corrientes + Dilatación Física 1 iter ~1.6 km)"]
+        B --> C["Serie de Matrices Binarias 256x256 (.npy)<br/>(Frentes Activos Diarios)"]
     end
 
-    subgraph FASE 2: Optimización Inversa Multitemporal
-        C --> D["algoritmo_genetico.py\n(Población de Cromosomas Climáticos)"]
-        D --> E["calcular_dimension_fractal.py\n(Box-Counting Directo D_sat)"]
-        D --> F["automata_celular.py\n(Simulación Estocástica AC)"]
-        F --> G["Fitness Multitemporal Híbrido\nPromedio(0.5*Fractal + 0.5*F1_Espacial)"]
+    subgraph FASE_2 ["FASE 2: Optimización Inversa Multitemporal"]
+        C --> D["algoritmo_genetico.py<br/>(Población de Cromosomas Climáticos)"]
+        D --> E["calcular_dimension_fractal.py<br/>(Box-Counting Directo D)"]
+        D --> F["automata_celular.py<br/>(Simulación Estocástica AC)"]
+        F --> G["Fitness Multitemporal Híbrido<br/>50% Fractal + 50% F1-Dice"]
         G --> D
     end
 
-    subgraph FASE 3: Simulación Preventiva
-        D --> H["Mejores Variables Microclimáticas\n(Viento, Dirección, Humedad, Combustible)"]
+    subgraph FASE_3 ["FASE 3: Simulación Preventiva Multi-Horizonte"]
+        D --> H["Mejores Variables Microclimáticas<br/>(Viento, Dirección, Humedad, Combustible)"]
         C --> I["simulador_predictivo.py"]
         H --> I
-        I --> J["Mapa de Riesgo Predictivo Multipanel (.png)"]
+        I --> J["🗺️ Mapa de Riesgo Predictivo Multipanel (.png)"]
     end
 
-    subgraph FASE 4: Transposición Cartográfica Territorial (Corrientes)
-        I --> K["visualizador_corrientes.py\n(Georreferenciación Departamental)"]
+    subgraph FASE_4 ["FASE 4: Validación Fuera de Muestra (Walk-Forward)"]
+        H --> V1["validacion_walk_forward.py<br/>(Evaluación Prospectiva Ciega)"]
+        C --> V1
+        V1 --> V2["📊 Diagnóstico Espacial 3x3 (.png)"]
+        V1 --> V3["📈 Curva de Métricas (.png)"]
+        V1 --> V4["📑 Reporte Cuantitativo (.csv)"]
+    end
+
+    subgraph FASE_5 ["FASE 5: Transposición Cartográfica Territorial (Corrientes)"]
+        I --> K["visualizador_corrientes.py<br/>(Georreferenciación Departamental)"]
         L["GeoJSON 25 Departamentos de Corrientes"] --> K
-        K --> M["Mapa GIS Estático de Corrientes\noutput/mapa_corrientes_prediccion.png"]
-        K --> N["Mapa Web Interactivo Folium Corrientes\noutput/mapa_corrientes_interactivo.html"]
-        K --> O["Ranking de Departamentos Afectados"]
+        K --> M["📍 Mapa GIS Estático 4 Paneles (.png)"]
+        K --> N["🌐 Mapa Web Folium Interactivo (.html)"]
+        K --> O["📋 Ranking de Departamentos Afectados"]
     end
 ```
 

@@ -18,11 +18,11 @@ En el modelado de sistemas complejos y dinámica de incendios forestales, evalua
 Para garantizar la **validez prospectiva** del modelo de optimización inversa, se diseñó un protocolo de **Validación Fuera de Muestra (_Walk-Forward_)**:
 
 1. **Ventana de Calibración / Entrenamiento ($T_0 \to T_1$):** El Algoritmo Genético optimiza las variables climáticas ($v_{\text{viento}}, \theta_{\text{dir}}, H_{\text{hum}}, C_{\text{comb}}$) observando únicamente los días **16 y 17 de febrero de 2022**.
-2. **Ventana de Prueba Ciega Multietapa ($T+1, T+2, T+3$):** A partir del estado de la cicatriz de fuego al finalizar el entrenamiento ($T_1$, 17 de febrero), se proyecta la evolución del fuego en el Autómata Celular durante 3 días consecutivos sin reentrenar el algoritmo:
+2. **Ventana de Prueba Ciega Multietapa ($T+1, T+2, T+3$):** A partir del estado del frente activo de fuego al finalizar el entrenamiento ($T_1$, 17 de febrero), se proyecta la evolución del fuego en el Autómata Celular durante 3 días consecutivos sin reentrenar el algoritmo:
    - **Horizonte +24h:** 18 de febrero de 2022 (+30 pasos AC).
-   - **Horizonte +48h:** 19 de febrero de 2022 (+60 pasos AC acumulados).
-   - **Horizonte +72h:** 20 de febrero de 2022 (+90 pasos AC acumulados).
-3. **Contraste Ciego contra NASA FIRMS:** Cada proyección simulada se evalúa contra las observaciones satelitales reales no vistas por el AG.
+   - **Horizonte +48h:** 19 de febrero de 2022 (+60 pasos AC).
+   - **Horizonte +72h:** 20 de febrero de 2022 (+90 pasos AC).
+3. **Contraste Ciego contra NASA FIRMS:** Cada proyección simulada se evalúa contra las observaciones satelitales reales instantáneas no vistas por el AG.
 
 ---
 

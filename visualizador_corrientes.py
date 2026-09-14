@@ -379,7 +379,7 @@ def generar_mapa_interactivo_corrientes(matriz_inicial, matriz_futura, mapa_ries
         image=data_uri_base,
         bounds=bounds_overlay,
         opacity=0.88,
-        name=f'🔥 Foco Base Observado ({fecha_final})',
+        name=f'🔥 Focos Activos Observados ({fecha_final})',
         interactive=True
     ).add_to(mapa)
     

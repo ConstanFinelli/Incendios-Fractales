@@ -82,9 +82,9 @@ def ejecutar_validacion_walk_forward(
     print("[PASO 3] Inferencia Prospectiva Ciega a +24h, +48h y +72h en el Autómata Celular...")
     print("-" * 75)
     
-    # Cargar la matriz real acumulada al final de la calibración
+    # Cargar las matrices satelitales instantáneas de calibración
     datos_calib_cargados = cargar_datos_serie_temporal(entradas_calib)
-    matriz_base_calib = datos_calib_cargados[-1]['matriz']  # Último día de entrenamiento
+    matriz_base_calib = datos_calib_cargados[-1]['matriz']  # Último día de entrenamiento (Frente Activo Instantáneo)
     fecha_base = fechas_calib_validas[-1]
     tamano = matriz_base_calib.shape[0]
     mascara_prov = cargar_mascara_provincia(tamano)
@@ -102,9 +102,6 @@ def ejecutar_validacion_walk_forward(
     if np.max(grilla_proyeccion) == 1:
         grilla_proyeccion[grilla_proyeccion > 0] = 1
         
-    # Acumulador de matriz real satelital
-    matriz_real_acumulada = np.copy(grilla_proyeccion)
-    
     resultados_horizontes = []
     horizontes_labels = ["+24h (1 Día)", "+48h (2 Días)", "+72h (3 Días)"]
     

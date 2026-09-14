@@ -49,7 +49,7 @@ Para que el modelo computacional sea fiel a las leyes de la física y a la ecolo
 - **Saturación Matemática en el Autómata Celular:** En la ecuación del AC, el factor del viento crece exponencialmente:
   $$\text{Factor Viento} = e^{0.05 \cdot v_{\text{viento}} \cdot \cos(\Delta\theta)}$$
   A $v = 50\text{ km/h}$, el factor multiplicador a favor del viento es $e^{2.5} \approx 12.18\times$, lo que satura la probabilidad de ignición al tope máximo permitido por el simulador ($95\%$). Permitir velocidades mayores (ej. $80 - 100\text{ km/h}$) crearía una "zona ciega" donde el AG no podría distinguir entre valores porque todos producirían exactamente el mismo avance saturado al $95\%$, perdiendo gradiente de optimización.
-- **Resolución Espacial y Estabilidad:** En una grilla de $256 \times 256$ donde cada celda representa $\sim 1.57\text{ km}$, una velocidad de $50\text{ km/h}$ permite avanzar $60 - 90\text{ km/día}$ en 30 pasos de simulación, coincidiendo con la tasa de expansión récord real y evitando que el frente escape o se desborde fuera de la matriz.
+- **Resolución Espacial y Estabilidad del Autómata:** En una grilla de $256 \times 256$ donde cada celda mide $\Delta x \approx 1.57\text{ km}$, un avance en 30 pasos diarios representa una tasa máxima de propagación del frente de combustión de $v_{\text{frente}} \approx 1.96\text{ km/h}$ ($30 \times 1.57\text{ km} \approx 47.1\text{ km/día}$ en avance ortogonal, o hasta $\approx 66.6\text{ km/día}$ en diagonal). Esto coincide con el comportamiento biofísico real (donde la velocidad de avance del frente de llamas suele ser entre el $3\%$ y el $8\%$ de la velocidad del viento en superficie) y asegura que el fuego no escape ni desborde fuera de la grilla provincial.
 
 ---
 

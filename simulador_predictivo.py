@@ -24,11 +24,13 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
     
     # Determinar si es serie temporal o matriz directa
     if isinstance(datos_entrada, list):
-        fecha_inicial, ruta_inicial = datos_entrada[0]
-        fecha_final, ruta_final = datos_entrada[-1]
-        matriz_inicial = np.load(ruta_inicial)
-        # El punto de partida de la predicción es el foco activo del último día observado
-        matriz_final = np.load(ruta_final)
+        from algoritmo_genetico import cargar_datos_serie_temporal
+        datos_cargados = cargar_datos_serie_temporal(datos_entrada)
+        fecha_inicial = datos_cargados[0]['fecha']
+        fecha_final = datos_cargados[-1]['fecha']
+        matriz_inicial = datos_cargados[0]['matriz']
+        # El punto de partida de la predicción son los focos activos instantáneos del último día observado
+        matriz_final = datos_cargados[-1]['matriz']
         modo_multitemporal = len(datos_entrada) > 1
     elif isinstance(datos_entrada, np.ndarray):
         matriz_inicial = datos_entrada
@@ -50,7 +52,7 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
     print("\n" + "="*65)
     print("INICIANDO FASE PREDICTIVA MULTI-HORIZONTE (24h, 48h y 72h)")
     print("="*65)
-    print(f"Punto de partida de la proyección (Foco Observado Base): {fecha_final}")
+    print(f"Punto de partida de la proyección (Frente Activo Instantáneo): {fecha_final}")
     print(f"Horizontes de Simulación: +24h ({pasos_por_dia} ciclos) | +48h ({pasos_por_dia*2} ciclos) | +72h ({pasos_por_dia*3} ciclos)")
     print(f"Condiciones Microclimáticas Inferidas: Viento {viento_vel:.1f}km/h @ {viento_dir:.1f}° | Humedad {humedad:.1f}% | Comb {combustible:.2f}")
     
@@ -81,11 +83,11 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
     celdas_48h = int(np.sum(matriz_48h > 0)) - int(np.sum(matriz_24h > 0))
     celdas_72h = int(np.sum(matriz_72h > 0)) - int(np.sum(matriz_48h > 0))
     
-    print(f" -> Foco Base Observado ({fecha_final}): {celdas_base} celdas")
+    print(f" -> Focos Activos Observados ({fecha_final}): {celdas_base} celdas")
     print(f" -> Avance Táctico +24h (Día 1): +{celdas_24h} nuevas celdas")
     print(f" -> Avance Preventivo +48h (Día 2): +{celdas_48h} nuevas celdas")
     print(f" -> Avance Estratégico +72h (Día 3): +{celdas_72h} nuevas celdas")
-    print(f" -> Masa total acumulada proyectada (+72h): {int(np.sum(matriz_72h > 0))} celdas")
+    print(f" -> Masa total proyectada (+72h): {int(np.sum(matriz_72h > 0))} celdas")
     
     # Construcción de la matriz de riesgo isócrona acumulativa:
     # 0 = Zona Intacta

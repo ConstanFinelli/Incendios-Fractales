@@ -228,15 +228,15 @@ def generar_mapa_estatico_corrientes(matriz_inicial, matriz_futura, mapa_riesgo,
     color_est_72h = '#e74c3c'      # Rojo carmesí estratégico
     
     p_prov = mpatches.Patch(facecolor='#f7f9fa', edgecolor='#2c3e50', label='Provincia de Corrientes')
-    p_base = mpatches.Patch(color=color_foco_base, label=f'Foco Satelital Base ({fecha_final})')
+    p_base = mpatches.Patch(color=color_foco_base, label=f'Focos Activos Base ({fecha_final})')
     p_24h = mpatches.Patch(color=color_tac_24h, label='Avance Táctico (+24h)')
     p_48h = mpatches.Patch(color=color_prev_48h, label='Avance Preventivo (+48h)')
     p_72h = mpatches.Patch(color=color_est_72h, label='Avance Estratégico (+72h)')
     
     # -------------------------------------------------------------
-    # PANEL 1: Foco Base Observado (Sin Rojo de Predicción)
+    # PANEL 1: Focos Activos Observados (Sin Rojo de Predicción)
     # -------------------------------------------------------------
-    axes[0].set_title(f"1. Foco Base Observado\n({fecha_final})", fontsize=11.5, fontweight='bold', pad=10)
+    axes[0].set_title(f"1. Focos Activos Observados\n({fecha_final})", fontsize=11.5, fontweight='bold', pad=10)
     m1 = np.ma.masked_where(fuego_base_prov == 0, fuego_base_prov)
     axes[0].imshow(m1, extent=extent, origin='lower', cmap=ListedColormap([color_foco_base]), alpha=0.90, zorder=3)
     axes[0].legend(handles=[p_prov, p_base], loc='lower right', framealpha=0.92, fontsize=8.5)

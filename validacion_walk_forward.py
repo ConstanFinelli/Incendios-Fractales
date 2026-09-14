@@ -17,7 +17,7 @@ from algoritmo_genetico import (
 )
 from automata_celular import _avanzar_pasos_AC
 from calcular_dimension_fractal import calcular_dimension_fractal_directa
-from visualizador_corrientes import cargar_geometria_corrientes, LAT_MIN, LAT_MAX, LON_MIN, LON_MAX
+from visualizador_corrientes import cargar_geometria_corrientes, cargar_mascara_provincia, LAT_MIN, LAT_MAX, LON_MIN, LON_MAX
 
 def ejecutar_validacion_walk_forward(
     fechas_calibracion=['2022-02-16', '2022-02-17'],
@@ -87,6 +87,7 @@ def ejecutar_validacion_walk_forward(
     matriz_base_calib = datos_calib_cargados[-1]['matriz']  # Último día de entrenamiento
     fecha_base = fechas_calib_validas[-1]
     tamano = matriz_base_calib.shape[0]
+    mascara_prov = cargar_mascara_provincia(tamano)
     
     # Capa de combustible biofísica
     try:
@@ -96,11 +97,13 @@ def ejecutar_validacion_walk_forward(
         mapa_combustible = None
         
     grilla_proyeccion = np.copy(matriz_base_calib).astype(int)
+    if mascara_prov is not None:
+        grilla_proyeccion = np.logical_and(grilla_proyeccion > 0, mascara_prov).astype(int)
     if np.max(grilla_proyeccion) == 1:
         grilla_proyeccion[grilla_proyeccion > 0] = 1
         
     # Acumulador de matriz real satelital
-    matriz_real_acumulada = np.copy(matriz_base_calib)
+    matriz_real_acumulada = np.copy(grilla_proyeccion)
     
     resultados_horizontes = []
     horizontes_labels = ["+24h (1 Día)", "+48h (2 Días)", "+72h (3 Días)"]
@@ -124,15 +127,19 @@ def ejecutar_validacion_walk_forward(
         
         matriz_sim_binaria = np.where(grilla_proyeccion > 0, 1, 0)
         
-        # Cargar observación satelital real de ese día y acumular cicatriz
+        # Cargar observación satelital real instantánea de ese día (Foco Activo puro del día)
         matriz_dia_real = np.load(dict_rutas[fecha_test])
-        matriz_real_acumulada = np.logical_or(matriz_real_acumulada > 0, matriz_dia_real > 0).astype(int)
+        matriz_real_test = matriz_dia_real.copy()
         
-        # Cómputo de Matriz de Confusión Espacial
-        vp = np.logical_and(matriz_sim_binaria > 0, matriz_real_acumulada > 0).sum()
-        fp = np.logical_and(matriz_sim_binaria > 0, matriz_real_acumulada == 0).sum()
-        fn = np.logical_and(matriz_sim_binaria == 0, matriz_real_acumulada > 0).sum()
-        vn = np.logical_and(matriz_sim_binaria == 0, matriz_real_acumulada == 0).sum()
+        if mascara_prov is not None:
+            matriz_sim_binaria = np.logical_and(matriz_sim_binaria > 0, mascara_prov).astype(int)
+            matriz_real_test = np.logical_and(matriz_real_test > 0, mascara_prov).astype(int)
+        
+        # Cómputo de Matriz de Confusión Espacial instantánea contra el frente real del día
+        vp = np.logical_and(matriz_sim_binaria > 0, matriz_real_test > 0).sum()
+        fp = np.logical_and(matriz_sim_binaria > 0, matriz_real_test == 0).sum()
+        fn = np.logical_and(matriz_sim_binaria == 0, matriz_real_test > 0).sum()
+        vn = np.logical_and(matriz_sim_binaria == 0, matriz_real_test == 0).sum()
         
         # Métricas de Cobertura Espacial
         recall = (vp / (vp + fn)) if (vp + fn) > 0 else 0.0
@@ -141,7 +148,7 @@ def ejecutar_validacion_walk_forward(
         iou = (vp / (vp + fp + fn)) if (vp + fp + fn) > 0 else 0.0
         
         # Métricas de Geometría Fractal
-        d_real = calcular_dimension_fractal_directa(matriz_real_acumulada)
+        d_real = calcular_dimension_fractal_directa(matriz_real_test)
         d_sim = calcular_dimension_fractal_directa(matriz_sim_binaria)
         delta_d = abs(d_real - d_sim)
         fitness_fractal = 1.0 / (1.0 + delta_d)
@@ -155,9 +162,9 @@ def ejecutar_validacion_walk_forward(
         # 2 = Falso Positivo FP (Rojo: sobreexpansión predicha que no ocurrió)
         # 3 = Falso Negativo FN (Amarillo: fuego real no detectado por el modelo)
         matriz_error_visual = np.zeros((tamano, tamano), dtype=int)
-        matriz_error_visual[np.logical_and(matriz_sim_binaria > 0, matriz_real_acumulada > 0)] = 1  # VP
-        matriz_error_visual[np.logical_and(matriz_sim_binaria > 0, matriz_real_acumulada == 0)] = 2  # FP
-        matriz_error_visual[np.logical_and(matriz_sim_binaria == 0, matriz_real_acumulada > 0)] = 3  # FN
+        matriz_error_visual[np.logical_and(matriz_sim_binaria > 0, matriz_real_test > 0)] = 1  # VP
+        matriz_error_visual[np.logical_and(matriz_sim_binaria > 0, matriz_real_test == 0)] = 2  # FP
+        matriz_error_visual[np.logical_and(matriz_sim_binaria == 0, matriz_real_test > 0)] = 3  # FN
         
         resultado_h = {
             'horizonte': label_h,
@@ -174,7 +181,7 @@ def ejecutar_validacion_walk_forward(
             'vp': vp,
             'fp': fp,
             'fn': fn,
-            'matriz_real': matriz_real_acumulada.copy(),
+            'matriz_real': matriz_real_test.copy(),
             'matriz_sim': matriz_sim_binaria.copy(),
             'matriz_error': matriz_error_visual
         }
@@ -220,8 +227,8 @@ def ejecutar_validacion_walk_forward(
         # Columna 1: Observación Satelital Real NASA sobre Corrientes
         m_real = np.ma.masked_where(res['matriz_real'] == 0, res['matriz_real'])
         ax1.imshow(m_real, origin='lower', extent=extent, cmap=ListedColormap(['#dc2626']), alpha=0.88, zorder=3)
-        ax1.set_title(f"1. Verdad Satelital NASA ({res['fecha']})\nHorizonte {res['horizonte']} | D_real={res['d_real']:.3f}", fontsize=11.5, fontweight='bold', pad=8)
-        p_real = mpatches.Patch(color='#dc2626', label=f"Cicatriz Satelital ({res['fecha']})")
+        ax1.set_title(f"1. Focos Activos NASA ({res['fecha']})\nHorizonte {res['horizonte']} | D_real={res['d_real']:.3f}", fontsize=11.5, fontweight='bold', pad=8)
+        p_real = mpatches.Patch(color='#dc2626', label=f"Foco Satelital ({res['fecha']})")
         p_prov = mpatches.Patch(facecolor='#f1f5f9', edgecolor='#64748b', label='Provincia de Corrientes')
         ax1.legend(handles=[p_prov, p_real], loc='lower right', fontsize=8.5)
         
@@ -251,6 +258,7 @@ def ejecutar_validacion_walk_forward(
     plt.tight_layout()
     
     ruta_figura_diagnostico = 'output/walk_forward_comparativa_3dias.png'
+    os.makedirs(os.path.dirname(os.path.abspath(ruta_figura_diagnostico)), exist_ok=True)
     plt.savefig(ruta_figura_diagnostico, dpi=300, bbox_inches='tight')
     plt.close()
     print(f" -> Gráfico diagnóstico multipanel guardado en: {ruta_figura_diagnostico}")
@@ -281,6 +289,7 @@ def ejecutar_validacion_walk_forward(
         ax.annotate(f"{txt:.3f}", (ejes_x[i], valores_f1[i] + 0.03), fontweight='bold', color='green', ha='center')
         
     ruta_figura_curvas = 'output/walk_forward_metricas_progression.png'
+    os.makedirs(os.path.dirname(os.path.abspath(ruta_figura_curvas)), exist_ok=True)
     plt.tight_layout()
     plt.savefig(ruta_figura_curvas, dpi=300, bbox_inches='tight')
     plt.close()
@@ -288,6 +297,7 @@ def ejecutar_validacion_walk_forward(
     
     # 6. Exportar Tabla CSV Consolidada
     ruta_csv = 'output/reporte_walk_forward_3dias.csv'
+    os.makedirs(os.path.dirname(os.path.abspath(ruta_csv)), exist_ok=True)
     with open(ruta_csv, mode='w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow([

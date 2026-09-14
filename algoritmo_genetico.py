@@ -38,7 +38,6 @@ def cargar_datos_serie_temporal(entradas):
         entradas = [("Día_Único", entradas)]
         
     datos_serie = []
-    matriz_acumulada = None
     
     for fecha, ruta in entradas:
         if not os.path.exists(ruta):
@@ -54,15 +53,8 @@ def cargar_datos_serie_temporal(entradas):
                 continue
             
         matriz_dia = np.load(ruta)
-        
-        if matriz_acumulada is None:
-            matriz_acumulada = matriz_dia.copy()
-        else:
-            # Hacer que la matriz real sea acumulativa (cicatriz de fuego total)
-            matriz_acumulada = np.logical_or(matriz_acumulada > 0, matriz_dia > 0).astype(int)
-            
-        matriz_real = matriz_acumulada.copy()
-        # T1.5: Dimensión fractal directa sobre el frente activo multicluster
+        matriz_real = matriz_dia.copy()
+        # T1.5: Dimensión fractal directa sobre el frente activo multicluster del día
         D_real = calcular_dimension_fractal_directa(matriz_real)
             
         datos_serie.append({
@@ -72,7 +64,7 @@ def cargar_datos_serie_temporal(entradas):
             'dimension_fractal': D_real
         })
         
-        print(f" -> [{fecha}] Dimensión Fractal Satelital (D): {D_real:.4f} | Celdas acumuladas: {np.sum(matriz_real > 0)}")
+        print(f" -> [{fecha}] Dimensión Fractal Satelital Instantánea (D): {D_real:.4f} | Celdas activas: {np.sum(matriz_real > 0)}")
         
     return datos_serie
 

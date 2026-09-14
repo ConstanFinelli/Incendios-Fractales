@@ -3,7 +3,9 @@
 ## 1. Funciones Definidas en este Archivo
 
 <a id="extraer_perimetro"></a>
+
 ### `extraer_perimetro(matriz_binaria)`
+
 - **Firma:** `def extraer_perimetro(matriz_binaria):`
 - **Descripción:** Extrae la frontera exterior o contorno perimetral de una silueta de fuego binaria mediante erosión morfológica binaria ($A \setminus (A \ominus B)$). Cuenta con protección defensiva: si los frentes son de 1 o 2 píxeles y la erosión los extingue completamente, la función reconoce las celdas en sí como frontera activa natural, retornando la matriz binaria completa.
 - **Parámetros:**
@@ -13,7 +15,9 @@
 ---
 
 <a id="calcular_box_counting"></a>
+
 ### `calcular_box_counting(matriz_binaria)`
+
 - **Firma:** `def calcular_box_counting(matriz_binaria):`
 - **Descripción:** Implementa el cálculo de la dimensión fractal de Minkowski-Bouligand mediante el método de Box-Counting de alta velocidad (100% vectorizado en NumPy). Divide progresivamente el espacio en grillas cuadradas con cajas de tamaño $\epsilon = n, n/2, n/4, \dots, 1$. Para cada tamaño intermedio, efectúa una redistribución tensorial en 4 dimensiones (`reshape(n // tamano, tamano, n // tamano, tamano)`) y aplica `any(axis=(1, 3))` para determinar qué cajas intersectan el conjunto de celdas. Es matemáticamente válido tanto para contornos perimetrales como para conjuntos dispersos o frentes multifocales (polvos fractales en $\mathbb{R}^2$). Finalmente, calcula una regresión lineal en escala log-log mediante `numpy.polyfit(x, y, 1)`.
 - **Parámetros:**
@@ -28,7 +32,9 @@
 ---
 
 <a id="calcular_dimension_fractal_directa"></a>
+
 ### `calcular_dimension_fractal_directa(matriz_binaria)`
+
 - **Firma:** `def calcular_dimension_fractal_directa(matriz_binaria):`
 - **Descripción:** Función de conveniencia optimizada que calcula de forma directa la dimensión fractal de Box-Counting $D$ sobre el conjunto de celdas activas de una matriz binaria, omitiendo el paso de erosión morfológica. Ideal para frentes de fuego multifocales y conjuntos dispersos.
 - **Parámetros:**
@@ -39,5 +45,4 @@
 
 ## 2. Funciones y Constantes Importadas de Otros Módulos del Proyecto
 
-*Este archivo no importa funciones ni constantes de otros módulos del proyecto.* Es un módulo de base geométrica y matemática autosuficiente.
-
+_Este archivo no importa funciones ni constantes de otros módulos del proyecto._ Es un módulo de base geométrica y matemática autosuficiente.

@@ -2,7 +2,7 @@
 
 **Fecha:** Septiembre 2026  
 **Módulo:** `algoritmo_genetico.py`  
-**Estado:** Implementado y Validado  
+**Estado:** Implementado y Validado
 
 ---
 
@@ -25,12 +25,14 @@ La función de aptitud se definía originalmente como una combinación convexa:
 $$\text{Fitness} = 0.50 \cdot F_{\text{fractal}} + 0.50 \cdot \text{IoU}$$
 
 Donde:
+
 - $F_{\text{fractal}} = \frac{1}{1 + |D_{\text{real}} - D_{\text{sim}}|}$, siendo $D$ la Dimensión Fractal calculada mediante box-counting directo sobre el frente activo multicluster.
 - $\text{IoU} = \frac{|M_{\text{real}} \cap M_{\text{sim}}|}{|M_{\text{real}} \cup M_{\text{sim}}|}$, evaluado entre la máscara binaria satelital acumulada al día $T+1$ y la cicatriz simulada tras 30 pasos de autómata celular.
 
 ### 2.2. La Anomalía del Techo en $\approx 0.570$
 
 Al ejecutar 40 generaciones del AG con datos reales de la NASA FIRMS / VIIRS para los días 17 y 18 de febrero de 2022 en Corrientes, los registros de telemetría mostraron consistentemente:
+
 - **$F_{\text{fractal}} \approx 0.94 - 0.96$**: La rugosidad fractal del frente activo simulado convergía con extrema precisión a la del satélite ($D \approx 1.34 - 1.37$, error $|D_{\text{real}} - D_{\text{sim}}| \approx 0.04$).
 - **$\text{IoU} \approx 0.18 - 0.20$**: Incapaz de superar dicho umbral, independientemente de la combinación de genes probada.
 - **Fitness resultante**:
@@ -41,6 +43,7 @@ Al ejecutar 40 generaciones del AG con datos reales de la NASA FIRMS / VIIRS par
 El operador de Jaccard ($\text{IoU}$) evalúa congruencia morfológica exacta píxel por píxel. En un problema de dinámica de frentes de onda biológicos o de fuego con avance de $+24$ horas, esta métrica genera dos distorsiones severas:
 
 #### A. La Trampa del Denominador Creciente (Doble Penalización)
+
 Sea $M_{\text{real}}$ el conjunto de celdas quemadas observadas y $M_{\text{sim}}$ el conjunto simulado. Para que el frente se propague desde los puntos iniciales $T_0$ y alcance focos distantes observados en $T_1$, el autómata debe quemar celdas intermedias:
 $$\text{IoU} = \frac{|M_{\text{real}} \cap M_{\text{sim}}|}{|M_{\text{real}}| + |M_{\text{sim}}| - |M_{\text{real}} \cap M_{\text{sim}}|}$$
 
@@ -49,7 +52,9 @@ $$\text{Unión} = 1740 + 2760 - 1673 = 2827 \implies \text{IoU} = \frac{1673}{28
 Si la dispersión es mayor (por ejemplo, 5000 celdas simuladas para atrapar cúmulos satelitales separados), la unión es 5067 y el $\text{IoU}$ cae a **$0.33$**. En configuraciones donde los focos satelitales reales son dispersos o multicluster (típico en Corrientes con esteros e isletas de vegetación), el IoU colapsa a $\approx \mathbf{0.19}$.
 
 #### B. La Trampa de la Extinción Prematura (Incentivo Perverso)
+
 Si un individuo poseía parámetros que apagaban el fuego de inmediato (humedad extrema $\approx 80\%$, viento nulo), la simulación apenas alteraba la matriz inicial:
+
 - Dado que $M_{\text{sim}} \approx M_{\text{inicio}} \subset M_{\text{real}}$, prácticamente no había falsos positivos ($|M_{\text{sim}} \setminus M_{\text{real}}| \approx 0$).
 - En casos de poco crecimiento relativo, el IoU artificialmente resultaba más alto o penalizaba menos la inacción que el crecimiento activo que alcanzaba los focos reales.
 
@@ -60,6 +65,7 @@ Si un individuo poseía parámetros que apagaban el fuego de inmediato (humedad 
 ### 3.1. Fundamentación Física y Conceptual
 
 La propuesta radica en responder a dos preguntas fundamentales sobre la dinámica del fuego:
+
 1. **Capacidad de Alcance (Recall / Cobertura):** ¿Logró el modelo alcanzar y envolver los focos de calor reales reportados por los sensores satelitales?
 2. **Pureza de Trayectoria (Precision / Eficiencia Espacial):** ¿Logró cubrir dichos focos mediante una ruta directa y plausible, sin necesidad de inundar o desbordar arbitrariamente todo el mapa?
 
@@ -85,6 +91,7 @@ Existe una relación monótona directa entre el índice de Jaccard ($J$) y el de
 $$D = \frac{2J}{1 + J}, \quad J = \frac{D}{2 - D}$$
 
 Principales ventajas para la optimización evolutiva:
+
 - **Mayor sensibilidad de gradiente:** Mientras que $J \in [0.10, 0.30]$ aplasta las diferencias genéticas en una meseta plana, $D \in [0.18, 0.46]$ expande dinámicamente la varianza entre individuos competentes, permitiendo a la selección por torneo distinguir con claridad hipótesis prometedoras.
 - **Ponderación equilibrada:** El denominador es lineal en la suma de cardinalidades ($|M_{\text{real}}| + |M_{\text{sim}}|$), eliminando la no linealidad cuadrática de la unión en presencia de dispersión.
 
@@ -94,12 +101,13 @@ Principales ventajas para la optimización evolutiva:
 
 Para contrastar el comportamiento de ambas métricas, se sometieron a prueba dos hipótesis climáticas simuladas con 30 pasos de autómata celular partiendo del mapa satelital real del 17 de febrero de 2022 hacia el objetivo del 18 de febrero de 2022:
 
-| Escenario de Viento | Comportamiento Físico | Cobertura ($M_{\text{real}}$) | Precisión ($M_{\text{sim}}$) | **IoU (Anterior)** | **$F_1$-Dice (Nuevo)** | Fitness Híbrido ($50\%$ Fractal) |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Viento Directo y Controlado** ($10 \text{ km/h}$, $45^\circ$) | Avance directo sobre el corredor de focos de la NASA. Mínimo desborde lateral. | **$96.1\%$** | **$60.6\%$** | $0.591$ | **$\mathbf{0.743}$** | **$\mathbf{0.846}$** |
-| **Viento Severo Descontrolado** ($40 \text{ km/h}$, $180^\circ$) | Quema indiscriminada de 40.000 celdas fuera del cauce real. | **$98.6\%$** | **$4.3\%$** | $0.042$ | **$\mathbf{0.082}$** | **$\mathbf{0.516}$** |
+| Escenario de Viento                                              | Comportamiento Físico                                                          | Cobertura ($M_{\text{real}}$) | Precisión ($M_{\text{sim}}$) | **IoU (Anterior)** | **$F_1$-Dice (Nuevo)** | Fitness Híbrido ($50\%$ Fractal) |
+| :--------------------------------------------------------------- | :----------------------------------------------------------------------------- | :---------------------------: | :--------------------------: | :----------------: | :--------------------: | :------------------------------: |
+| **Viento Directo y Controlado** ($10 \text{ km/h}$, $45^\circ$)  | Avance directo sobre el corredor de focos de la NASA. Mínimo desborde lateral. |         **$96.1\%$**          |         **$60.6\%$**         |      $0.591$       |  **$\mathbf{0.743}$**  |       **$\mathbf{0.846}$**       |
+| **Viento Severo Descontrolado** ($40 \text{ km/h}$, $180^\circ$) | Quema indiscriminada de 40.000 celdas fuera del cauce real.                    |         **$98.6\%$**          |         **$4.3\%$**          |      $0.042$       |  **$\mathbf{0.082}$**  |       **$\mathbf{0.516}$**       |
 
 ### Análisis de los Resultados:
+
 1. **Discriminación Positiva:** El escenario con viento controlado ($10\text{ km/h}$) que sigue el frente real obtiene un score espacial de **$0.743$**, elevando el fitness total de la simulación a **$> 0.84$** (superando holgadamente la barrera histórica de $0.57$).
 2. **Penalización Rigurosa a la Dispersión Masiva:** El escenario con viento descontrolado ($40\text{ km/h}$) logra una cobertura marginalmente superior ($98.6\%$), pero su precisión colapsa al $4.3\%$. La media armónica $F_1$ se derrumba automáticamente a **$0.082$**, castigando severamente el desborde y evitando que individuos "incendiarios masivos" proliferen en la población.
 
@@ -112,6 +120,7 @@ Se ratificó la paridad estricta entre ambos pilares:
 $$\text{Fitness Total} = 0.50 \cdot F_{\text{fractal}} + 0.50 \cdot \text{Score}_{\text{espacial}} (F_1)$$
 
 ### Justificación:
+
 1. **Complementariedad Ortogonal:**
    - La **Dimensión Fractal ($F_{\text{fractal}}$)** mide la complejidad geométrica, la rugosidad del perímetro y la ramificación multicluster del frente activo, garantizando que el patrón espacial responda a la física fractal de la percolación.
    - El **Score Espacial ($F_1$-Dice)** mide la orientación direccional y el anclaje geográfico absoluto sobre los focos satelitales reales observados.
@@ -127,6 +136,7 @@ $$\text{Fitness Total} = 0.50 \cdot F_{\text{fractal}} + 0.50 \cdot \text{Score}
 En el archivo [`algoritmo_genetico.py`](file:///c:/Facu/Algoritmos-geneticos/Incendios-Fractales/algoritmo_genetico.py):
 
 1. **Constantes de Ponderación:**
+
    ```python
    PESO_FRACTAL = 0.5           # Peso asignado a la Dimensión Fractal del frente activo
    PESO_ESPACIAL = 0.5          # Peso asignado a la Cobertura Eficiente Espacial (F1-Dice)
@@ -134,13 +144,14 @@ En el archivo [`algoritmo_genetico.py`](file:///c:/Facu/Algoritmos-geneticos/Inc
    ```
 
 2. **Cálculo Vectorizado en `evaluar_fitness_multitemporal` (Casos A y B):**
+
    ```python
    interseccion = np.logical_and(matriz_real_t > 0, matriz_binaria_sim > 0).sum()
    puntos_reales_t = (matriz_real_t > 0).sum()
    puntos_sim_t = (matriz_binaria_sim > 0).sum()
    denominador_espacial = puntos_reales_t + puntos_sim_t
    score_espacial = (2.0 * interseccion / denominador_espacial) if denominador_espacial > 0 else 0.0
-   
+
    fit_etapa = (PESO_FRACTAL * fitness_fractal) + (PESO_ESPACIAL * score_espacial)
    ```
 

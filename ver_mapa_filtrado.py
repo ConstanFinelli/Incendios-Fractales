@@ -9,14 +9,12 @@ from scipy.ndimage import binary_dilation
 
 import os
 
-# Constantes de la zona de estudio (Provincia de Corrientes, Argentina)
+# Coordenadas de Corrientes
 LAT_MIN, LAT_MAX = -30.8, -27.2
 LON_MIN, LON_MAX = -59.8, -55.6
 
-# Parámetros físicos de dilatación y resolución espacial
-ITERACIONES_DILATACION = 1       # Radio físico de transporte de pavesas (~1.6 km / 1 celda de grilla)
+ITERACIONES_DILATACION = 1
 
-# Directorios de almacenamiento estructurado
 DIR_OUTPUT = 'output'
 DIR_NPY = os.path.join(DIR_OUTPUT, 'npy')
 DIR_SILUETAS = os.path.join(DIR_OUTPUT, 'siluetas')
@@ -24,7 +22,6 @@ DIR_SILUETAS = os.path.join(DIR_OUTPUT, 'siluetas')
 _df_completo_cache = None
 
 def obtener_df_completo():
-    """Carga diferida (Lazy Loading) de la base de datos de la NASA para máxima velocidad de import."""
     global _df_completo_cache
     if _df_completo_cache is None:
         nombre_archivo = './DL_FIRE_SV-C2_788988/fire_archive_SV-C2_788988.json'
@@ -37,11 +34,6 @@ def obtener_df_completo():
 
 
 def procesar_una_fecha(fecha, df_fuente=None, verbose=True):
-    """
-    Procesa los datos satelitales para una fecha específica.
-    Filtra los focos en el área de estudio, rasteriza, dilata y limpia componentes aislados.
-    Retorna la ruta del archivo .npy limpio, o None si no hay focos.
-    """
     df_base = df_fuente if df_fuente is not None else obtener_df_completo()
     
     if fecha not in df_base['acq_date'].values:
@@ -51,7 +43,6 @@ def procesar_una_fecha(fecha, df_fuente=None, verbose=True):
         
     df_dia = df_base[df_base['acq_date'] == fecha]
     
-    # Filtrar dentro del área de estudio
     df_filtrado = df_dia[
         (df_dia['latitude'] >= LAT_MIN) & (df_dia['latitude'] <= LAT_MAX) &
         (df_dia['longitude'] >= LON_MIN) & (df_dia['longitude'] <= LON_MAX)
@@ -66,7 +57,6 @@ def procesar_una_fecha(fecha, df_fuente=None, verbose=True):
     if verbose:
         print(f" -> [{fecha}] {num_focos} focos detectados en el área de estudio.")
         
-    # Rasterización
     tamano_matriz = 256
     matriz_binaria = np.zeros((tamano_matriz, tamano_matriz))
     
@@ -80,16 +70,13 @@ def procesar_una_fecha(fecha, df_fuente=None, verbose=True):
     os.makedirs(DIR_SILUETAS, exist_ok=True)
     np.save(os.path.join(DIR_NPY, f'matriz_fractal_recorte_{fecha}.npy'), matriz_binaria)
     
-    # Filtro morfológico de dilatación física controlada (r ~ 1.6 km / 1 celda de grilla)
     matriz_continua = binary_dilation(matriz_binaria, iterations=ITERACIONES_DILATACION).astype(int)
     np.save(os.path.join(DIR_NPY, f'matriz_fractal_recorte_continua_{fecha}.npy'), matriz_continua)
     
-    # La matriz continua dilatada físicamente preserva el 100% de los focos reales observados
     matriz_limpia = matriz_continua
     nombre_matriz_limpia_npy = os.path.join(DIR_NPY, f'matriz_objetivo_limpia_{fecha}.npy')
     np.save(nombre_matriz_limpia_npy, matriz_limpia)
     
-    # Renderizar y guardar siluetas en output/siluetas/
     plt.figure(figsize=(6,6))
     plt.imshow(matriz_limpia, cmap='binary', origin='lower')
     plt.title(f"Frentes Activos Dilatación Física (r ~ 1.6 km) ({fecha})")
@@ -102,15 +89,9 @@ def procesar_una_fecha(fecha, df_fuente=None, verbose=True):
     return nombre_matriz_limpia_npy
 
 def procesar_rango_fechas(fecha_inicio, fecha_fin):
-    """
-    Procesa todas las fechas entre fecha_inicio y fecha_fin (inclusivas).
-    Filtra automáticamente los días con 0 focos en la zona.
-    Retorna una lista de tuplas [(fecha, ruta_matriz), ...] ordenadas cronológicamente.
-    """
     print(f"\nBuscando registros satelitales entre {fecha_inicio} y {fecha_fin}...")
     df_completo = obtener_df_completo()
     
-    # Obtener todas las fechas únicas disponibles en el rango
     fechas_en_rango = df_completo[
         (df_completo['acq_date'] >= fecha_inicio) & 
         (df_completo['acq_date'] <= fecha_fin)

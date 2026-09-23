@@ -15,7 +15,6 @@ def main():
     print(f"  Configuración: {PASOS_POR_DIA} pasos de simulación por día")
     print("="*65)
     
-    # 1. Solicitar Rango de Fechas
     print("\nIngrese el intervalo de fechas a analizar (ej. 2022-02-16 a 2022-02-17):")
     fecha_inicio = input("Fecha Inicial (AAAA-MM-DD): ").strip()
     
@@ -53,11 +52,9 @@ def main():
         print("El algoritmo genético no pudo completar la optimización.")
         sys.exit(1)
         
-    # 3. Fase Preventiva / Predictiva Multi-Horizonte (24h, 48h, 72h)
     print(f"\n[FASE 3] Simulación Predictiva Multi-Horizonte (24h, 48h, 72h) y Cartografía GIS...")
     ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_POR_DIA)
     
-    # 4. Fase de Validación Fuera de Muestra (Walk-Forward contra días reales siguientes)
     print(f"\n[FASE 4] Validación Fuera de Muestra (Walk-Forward: +24h, +48h y +72h)...")
     try:
         dt_fin = datetime.strptime(fecha_fin, "%Y-%m-%d")

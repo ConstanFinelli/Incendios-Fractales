@@ -25,16 +25,11 @@ def ejecutar_validacion_walk_forward(
     pasos_por_dia=PASOS_POR_DIA,
     mejores_variables=None
 ):
-    """
-    Ejecuta el protocolo científico de Validación Fuera de Muestra (Walk-Forward Validation)
-    evaluando la capacidad predictiva ciega a 3 horizontes temporales (+24h, +48h y +72h).
-    """
     print("=" * 75)
     print("  PROTOCOLO CIENTÍFICO: VALIDACIÓN FUERA DE MUESTRA (WALK-FORWARD)")
     print("  Evaluación Prospectiva Ciega a 3 Horizontes: +24h, +48h y +72h")
     print("=" * 75)
     
-    # 1. Asegurar procesamiento de datos satelitales
     todas_fechas = sorted(list(set(fechas_calibracion + fechas_prueba)))
     fecha_inicio_global = todas_fechas[0]
     fecha_fin_global = todas_fechas[-1]
@@ -43,7 +38,6 @@ def ejecutar_validacion_walk_forward(
     serie_satelital = procesar_rango_fechas(fecha_inicio_global, fecha_fin_global)
     dict_rutas = {fecha: ruta for fecha, ruta in serie_satelital}
     
-    # Validar que existan todas las fechas requeridas
     fechas_calib_validas = [f for f in fechas_calibracion if f in dict_rutas]
     fechas_prueba_validas = [f for f in fechas_prueba if f in dict_rutas]
     
@@ -54,7 +48,6 @@ def ejecutar_validacion_walk_forward(
     print(f" -> Fechas de Calibración / Entrenamiento: {fechas_calib_validas}")
     print(f" -> Fechas de Prueba Ciega (+24h, +48h, +72h): {fechas_prueba_validas}")
     
-    # 2. Fase de Calibración Inversa (Algoritmo Genético)
     if mejores_variables is None:
         print("\n" + "-" * 75)
         print("[PASO 2] Calibración Inversa: El AG optimiza variables sobre la ventana de entrenamiento...")
@@ -77,19 +70,16 @@ def ejecutar_validacion_walk_forward(
     print(f" • Humedad Relativa: {humedad:.2f} %")
     print(f" • Combustible:      {combustible:.3f}")
     
-    # 3. Preparar estado inicial para la simulación prospectiva
     print("\n" + "-" * 75)
     print("[PASO 3] Inferencia Prospectiva Ciega a +24h, +48h y +72h en el Autómata Celular...")
     print("-" * 75)
     
-    # Cargar las matrices satelitales instantáneas de calibración
     datos_calib_cargados = cargar_datos_serie_temporal(entradas_calib)
-    matriz_base_calib = datos_calib_cargados[-1]['matriz']  # Último día de entrenamiento (Frente Activo Instantáneo)
+    matriz_base_calib = datos_calib_cargados[-1]['matriz']
     fecha_base = fechas_calib_validas[-1]
     tamano = matriz_base_calib.shape[0]
     mascara_prov = cargar_mascara_provincia(tamano)
     
-    # Capa de combustible biofísica
     try:
         from capa_biomasa import obtener_mapa_combustible
         mapa_combustible = obtener_mapa_combustible(tamano)
@@ -110,7 +100,6 @@ def ejecutar_validacion_walk_forward(
         horas_acum = (idx + 1) * 24
         pasos_etapa = pasos_por_dia
         
-        # Avanzar el Autómata Celular 30 pasos hacia el siguiente horizonte
         grilla_proyeccion = _avanzar_pasos_AC(
             grilla_proyeccion,
             viento_vel=viento_vel,
@@ -124,7 +113,6 @@ def ejecutar_validacion_walk_forward(
         
         matriz_sim_binaria = np.where(grilla_proyeccion > 0, 1, 0)
         
-        # Cargar observación satelital real instantánea de ese día (Foco Activo puro del día)
         matriz_dia_real = np.load(dict_rutas[fecha_test])
         matriz_real_test = matriz_dia_real.copy()
         
@@ -132,32 +120,23 @@ def ejecutar_validacion_walk_forward(
             matriz_sim_binaria = np.logical_and(matriz_sim_binaria > 0, mascara_prov).astype(int)
             matriz_real_test = np.logical_and(matriz_real_test > 0, mascara_prov).astype(int)
         
-        # Cómputo de Matriz de Confusión Espacial instantánea contra el frente real del día
         vp = np.logical_and(matriz_sim_binaria > 0, matriz_real_test > 0).sum()
         fp = np.logical_and(matriz_sim_binaria > 0, matriz_real_test == 0).sum()
         fn = np.logical_and(matriz_sim_binaria == 0, matriz_real_test > 0).sum()
         vn = np.logical_and(matriz_sim_binaria == 0, matriz_real_test == 0).sum()
         
-        # Métricas de Cobertura Espacial
         recall = (vp / (vp + fn)) if (vp + fn) > 0 else 0.0
         precision = (vp / (vp + fp)) if (vp + fp) > 0 else 0.0
         f1_dice = (2.0 * vp / (2.0 * vp + fp + fn)) if (2.0 * vp + fp + fn) > 0 else 0.0
         iou = (vp / (vp + fp + fn)) if (vp + fp + fn) > 0 else 0.0
         
-        # Métricas de Geometría Fractal
         d_real = calcular_dimension_fractal_directa(matriz_real_test)
         d_sim = calcular_dimension_fractal_directa(matriz_sim_binaria)
         delta_d = abs(d_real - d_sim)
         fitness_fractal = 1.0 / (1.0 + delta_d)
         
-        # Fitness Híbrido Ciego (50% Fractal + 50% F1-Dice)
         fitness_hibrido_ciego = (0.5 * fitness_fractal) + (0.5 * f1_dice)
-        
-        # Matriz de error visual:
-        # 0 = Intacto / VN (Gris claro)
-        # 1 = Verdadero Positivo VP (Verde: fuego predicho y real acertado)
-        # 2 = Falso Positivo FP (Rojo: sobreexpansión predicha que no ocurrió)
-        # 3 = Falso Negativo FN (Amarillo: fuego real no detectado por el modelo)
+
         matriz_error_visual = np.zeros((tamano, tamano), dtype=int)
         matriz_error_visual[np.logical_and(matriz_sim_binaria > 0, matriz_real_test > 0)] = 1  # VP
         matriz_error_visual[np.logical_and(matriz_sim_binaria > 0, matriz_real_test == 0)] = 2  # FP
@@ -192,7 +171,6 @@ def ejecutar_validacion_walk_forward(
         print(f" * D_real = {d_real:.4f} | D_sim = {d_sim:.4f} | Error Delta_D = {delta_d:.4f}")
         print(f" * Fitness Hibrido Ciego: {fitness_hibrido_ciego:.4f}")
 
-    # 4. Generación del Mapa Diagnóstico Espacial Multipanel (3 Filas x 3 Columnas)
     print("\n" + "-" * 75)
     print("[PASO 4] Generando visualización científica cartográfica con mapa de Corrientes...")
     print("-" * 75)
@@ -205,13 +183,12 @@ def ejecutar_validacion_walk_forward(
     if num_horizontes == 1:
         axes = np.array([axes])
         
-    cmap_err = ListedColormap(['#10b981', '#ef4444', '#f59e0b'])  # 1: VP Verde, 2: FP Rojo, 3: FN Ámbar
+    cmap_err = ListedColormap(['#10b981', '#ef4444', '#f59e0b'])
     norm_err = BoundaryNorm([0.5, 1.5, 2.5, 3.5], 3)
     
     for row, res in enumerate(resultados_horizontes):
         ax1, ax2, ax3 = axes[row, 0], axes[row, 1], axes[row, 2]
         
-        # Renderizar base cartográfica de departamentos de Corrientes en los 3 ejes
         for ax in (ax1, ax2, ax3):
             if gdf_corrientes is not None:
                 gdf_corrientes.plot(ax=ax, color='#f1f5f9', edgecolor='#64748b', linewidth=0.75, zorder=1)
@@ -221,7 +198,7 @@ def ejecutar_validacion_walk_forward(
             ax.set_ylabel("Latitud Sur", fontsize=9.5)
             ax.grid(True, linestyle=':', alpha=0.4, color='#94a3b8', zorder=2)
             
-        # Columna 1: Observación Satelital Real NASA sobre Corrientes
+        # Observación satelital real NASA sobre Corrientes
         m_real = np.ma.masked_where(res['matriz_real'] == 0, res['matriz_real'])
         ax1.imshow(m_real, origin='lower', extent=extent, cmap=ListedColormap(['#dc2626']), alpha=0.88, zorder=3)
         ax1.set_title(f"1. Focos Activos NASA ({res['fecha']})\nHorizonte {res['horizonte']} | D_real={res['d_real']:.3f}", fontsize=11.5, fontweight='bold', pad=8)
@@ -229,14 +206,14 @@ def ejecutar_validacion_walk_forward(
         p_prov = mpatches.Patch(facecolor='#f1f5f9', edgecolor='#64748b', label='Provincia de Corrientes')
         ax1.legend(handles=[p_prov, p_real], loc='lower right', fontsize=8.5)
         
-        # Columna 2: Predicción Prospectiva Ciega sobre Corrientes
+        # Predicción prospectiva ciega sobre Corrientes
         m_sim = np.ma.masked_where(res['matriz_sim'] == 0, res['matriz_sim'])
         ax2.imshow(m_sim, origin='lower', extent=extent, cmap=ListedColormap(['#ea580c']), alpha=0.88, zorder=3)
         ax2.set_title(f"2. Predicción Ciega AC ({res['horas']}h)\nF1-Dice={res['f1_dice']*100:.1f}% | D_sim={res['d_sim']:.3f}", fontsize=11.5, fontweight='bold', pad=8)
         p_sim = mpatches.Patch(color='#ea580c', label=f"Avance Simulado (+{res['horas']}h)")
         ax2.legend(handles=[p_prov, p_sim], loc='lower right', fontsize=8.5)
         
-        # Columna 3: Mapa de Diagnóstico Espacial y Errores
+        # Mapa de diagnóstico espacial y errores
         m_err = np.ma.masked_where(res['matriz_error'] == 0, res['matriz_error'])
         ax3.imshow(m_err, origin='lower', extent=extent, cmap=cmap_err, norm=norm_err, alpha=0.92, zorder=3)
         ax3.set_title(f"3. Diagnóstico Espacial ({res['horizonte']})\nRecall={res['recall']*100:.1f}% | Precision={res['precision']*100:.1f}% | IoU={res['iou']*100:.1f}%", fontsize=11.5, fontweight='bold', pad=8)
@@ -260,7 +237,6 @@ def ejecutar_validacion_walk_forward(
     plt.close()
     print(f" -> Gráfico diagnóstico multipanel guardado en: {ruta_figura_diagnostico}")
     
-    # 5. Gráfico de Evolución de Métricas a lo Largo del Horizonte Temporal
     fig, ax = plt.subplots(figsize=(9, 5))
     ejes_x = [res['horizonte'] for res in resultados_horizontes]
     valores_f1 = [res['f1_dice'] for res in resultados_horizontes]
@@ -292,7 +268,6 @@ def ejecutar_validacion_walk_forward(
     plt.close()
     print(f" -> Gráfico de evolución de métricas guardado en: {ruta_figura_curvas}")
     
-    # 6. Exportar Tabla CSV Consolidada
     ruta_csv = 'output/reporte_walk_forward_3dias.csv'
     os.makedirs(os.path.dirname(os.path.abspath(ruta_csv)), exist_ok=True)
     with open(ruta_csv, mode='w', newline='', encoding='utf-8') as f:
@@ -315,7 +290,6 @@ def ejecutar_validacion_walk_forward(
             
     print(f" -> Reporte cuantitativo consolidado exportado a: {ruta_csv}")
     
-    # 7. Resumen Final en Consola
     print("\n" + "=" * 75)
     print("  RESUMEN EJECUTIVO: VALIDACION FUERA DE MUESTRA A 3 HORIZONTES")
     print("=" * 75)

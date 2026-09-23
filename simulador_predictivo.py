@@ -8,28 +8,17 @@ from capa_biomasa import obtener_mapa_combustible, generar_mapa_cobertura_grafic
 from matplotlib.colors import ListedColormap
 import os
 
-PASOS_POR_DIA = 30  # 30 pasos de autómata celular equivalen a 1 día de propagación
+PASOS_POR_DIA = 30
 
 def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_POR_DIA):
-    """
-    Toma los datos satelitales y las variables microclimáticas óptimas inferidas por el AG,
-    y simula el avance continuo del fuego a través de tres horizontes temporales clave:
-      - 24 horas (+30 pasos | Nivel Táctico: brigadistas y línea de fuego)
-      - 48 horas (+60 pasos | Nivel Preventivo: evacuación y cortafuegos pesados)
-      - 72 horas (+90 pasos | Nivel Estratégico: gestión territorial y reservas)
-    Genera un mapa de riesgo isócrono acumulativo y orquesta la transposición espacial.
-    Incorpora la capa raster de cobertura de suelo y biomasa real de Corrientes.
-    """
     viento_vel, viento_dir, humedad, combustible = mejores_variables
     
-    # Determinar si es serie temporal o matriz directa
     if isinstance(datos_entrada, list):
         from algoritmo_genetico import cargar_datos_serie_temporal
         datos_cargados = cargar_datos_serie_temporal(datos_entrada)
         fecha_inicial = datos_cargados[0]['fecha']
         fecha_final = datos_cargados[-1]['fecha']
         matriz_inicial = datos_cargados[0]['matriz']
-        # El punto de partida de la predicción son los focos activos instantáneos del último día observado
         matriz_final = datos_cargados[-1]['matriz']
         modo_multitemporal = len(datos_entrada) > 1
     elif isinstance(datos_entrada, np.ndarray):
@@ -56,11 +45,8 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
     print(f"Horizontes de Simulación: +24h ({pasos_por_dia} ciclos) | +48h ({pasos_por_dia*2} ciclos) | +72h ({pasos_por_dia*3} ciclos)")
     print(f"Condiciones Microclimáticas Inferidas: Viento {viento_vel:.1f}km/h @ {viento_dir:.1f}° | Humedad {humedad:.1f}% | Comb {combustible:.2f}")
     
-    # Cargar mapa de combustible biofísico heterogéneo
     mapa_combustible = obtener_mapa_combustible(tamano)
     
-    # Simulación encadenada continua en 3 etapas sucesivas de 24 horas cada una:
-    # M_base -> (+30) -> M_24h -> (+30) -> M_48h -> (+30) -> M_72h
     print("\nEjecutando propagación continua multietapa con heterogeneidad de biomasa...")
     grilla_72h, instantaneas_binarias = simular_evolucion_multietapa(
         viento_vel=viento_vel,
@@ -89,33 +75,24 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
     print(f" -> Avance Estratégico +72h (Día 3): +{celdas_72h} nuevas celdas")
     print(f" -> Masa total proyectada (+72h): {int(np.sum(matriz_72h > 0))} celdas")
     
-    # Construcción de la matriz de riesgo isócrona acumulativa:
-    # 0 = Zona Intacta
-    # 1 = Foco Satelital Observado (Base al término del período)
-    # 2 = Riesgo Táctico (+24h / Día 1)
-    # 3 = Riesgo Preventivo (+48h / Día 2)
-    # 4 = Riesgo Estratégico (+72h / Día 3)
     mapa_riesgo = np.zeros_like(matriz_final, dtype=int)
     mapa_riesgo[matriz_72h > 0] = 4
     mapa_riesgo[matriz_48h > 0] = 3
     mapa_riesgo[matriz_24h > 0] = 2
     mapa_riesgo[matriz_final > 0] = 1
     
-    # Paleta isócrona profesional
-    # Blanco/Crema, Carbón consolidado, Ámbar táctico, Naranja preventivo, Rojo estratégico
     cmap_isocronas = ListedColormap(['#f8f9fa', '#2c3e50', '#f39c12', '#e67e22', '#e74c3c'])
     
-    # Visualización Comparativa Multipanel (4 Paneles Horizontales)
     fig, axes = plt.subplots(1, 4, figsize=(24, 6), dpi=300)
     
-    # Panel 1: Foco Base Observado
+    # Foco base
     axes[0].imshow(matriz_final, cmap='hot_r', origin='lower', interpolation='nearest')
     axes[0].set_title(f"1. Foco Base Observado\n({fecha_final})", fontsize=11.5, fontweight='bold', pad=8)
     axes[0].axis('off')
     p_base_obs = mpatches.Patch(color='#343a40', label=f'Foco Satelital ({fecha_final})')
     axes[0].legend(handles=[p_base_obs], loc='lower right', framealpha=0.92)
     
-    # Panel 2: Predicción +24 Horas
+    # Predicción +24 horas
     mapa_p2 = np.zeros_like(matriz_final, dtype=int)
     mapa_p2[matriz_24h > 0] = 2
     mapa_p2[matriz_final > 0] = 1
@@ -126,7 +103,7 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
     p_tac = mpatches.Patch(color='#f39c12', label=f'Avance Táctico (+{celdas_24h} celdas)')
     axes[1].legend(handles=[p_base_obs, p_tac], loc='lower right', framealpha=0.92)
     
-    # Panel 3: Predicción a +48 Horas
+    # Predicción a +48 horas
     mapa_p3 = np.zeros_like(matriz_final, dtype=int)
     mapa_p3[matriz_48h > 0] = 3
     mapa_p3[matriz_24h > 0] = 2
@@ -138,7 +115,7 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
     p_prev = mpatches.Patch(color='#e67e22', label=f'Avance Preventivo (+{celdas_48h} celdas)')
     axes[2].legend(handles=[p_base_obs, p_tac, p_prev], loc='lower right', framealpha=0.92)
     
-    # Panel 4: Mapa de Riesgo Isócrono (+72 Horas)
+    # Predicción a +72 horas
     axes[3].imshow(mapa_riesgo, cmap=cmap_isocronas, origin='lower', interpolation='nearest')
     axes[3].set_title(f"4. Mapa de Riesgo Isócrono (+72h)\n(+{pasos_por_dia*3} Ciclos | Nivel Estratégico)", fontsize=11.5, fontweight='bold', pad=8)
     axes[3].axis('off')
@@ -163,7 +140,6 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
         '72h': matriz_72h
     }
     
-    # Generar transposición espacial sobre el mapa de la provincia de Corrientes
     try:
         from visualizador_corrientes import generar_mapas_corrientes
         generar_mapas_corrientes(
@@ -181,7 +157,6 @@ def ejecutar_prediccion(datos_entrada, mejores_variables, pasos_por_dia=PASOS_PO
         traceback.print_exc()
         print(f"Advertencia al proyectar mapa de Corrientes: {e}")
         
-    # Generar visualización del mapa de cobertura y combustible biofísico
     try:
         generar_mapa_cobertura_grafico(tamano)
     except Exception as e:
